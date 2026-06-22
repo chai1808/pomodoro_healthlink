@@ -36,11 +36,11 @@ export const ActivitySummary = ({
   return (
     <section
       className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3"
-      aria-label="活動量"
+      aria-label="歩数"
     >
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h2 className="text-xs tracking-widest text-mono-muted uppercase">
-          Activity
+          Steps
         </h2>
         <p className="text-sm text-mono-muted">
           平均{' '}
@@ -51,11 +51,13 @@ export const ActivitySummary = ({
         </p>
       </div>
 
-      <ul className="divide-y divide-mono-border/50">
-        {steps.map((day) => (
+      <ul className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-9">
+        {steps.map((day, index) => (
           <li
             key={day.date}
-            className="flex items-baseline justify-between py-2 text-xs first:pt-0 last:pb-0"
+            className={`flex items-baseline justify-between py-2 text-xs ${
+              index > 0 ? 'border-t border-mono-border/50' : ''
+            } ${index >= 2 ? 'sm:border-t' : 'sm:border-t-0'}`}
           >
             <span className="font-mono text-mono-text">{day.date}</span>
             <span className="font-mono text-mono-text">
