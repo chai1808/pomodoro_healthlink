@@ -20,6 +20,41 @@ const getPointX = (index: number, count: number): number => {
   return PAD_X + (index / (count - 1)) * innerW
 }
 
+const getNowX = (points: PressurePoint[]): number | null => {
+  if (points.length < 2) return null
+
+  const now = Date.now()
+  const first = points[0].timestamp
+  const last = points[points.length - 1].timestamp
+  if (now < first || now > last) return null
+
+  let index = points.findIndex(
+    (point, i) =>
+      point.timestamp <= now &&
+      (points[i + 1]?.timestamp ?? Number.POSITIVE_INFINITY) > now,
+  )
+
+  if (index < 0) {
+    index = points.reduce(
+      (closest, point, i) =>
+        Math.abs(point.timestamp - now) <
+        Math.abs(points[closest].timestamp - now)
+          ? i
+          : closest,
+      0,
+    )
+  }
+
+  const next = points[index + 1]
+  if (!next) return getPointX(index, points.length)
+
+  const fraction =
+    (now - points[index].timestamp) / (next.timestamp - points[index].timestamp)
+  const x0 = getPointX(index, points.length)
+  const x1 = getPointX(index + 1, points.length)
+  return x0 + fraction * (x1 - x0)
+}
+
 const buildLinePath = (points: PressurePoint[]): string => {
   if (points.length < 2) return ''
 
@@ -62,6 +97,7 @@ const buildDaySegments = (
 export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
   const points = weather.pressureWave3Days
   const linePath = buildLinePath(points)
+  const nowX = getNowX(points)
   const daySegments = buildDaySegments(points, weather.pressureDayBoundaries)
   const todayPressureText = getTodayPressureRangeText(
     weather.pressureRange,
@@ -118,12 +154,12 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
       </div>
 
       <div className="mt-3 w-full overflow-x-auto md:overflow-visible">
-        <div className="min-w-[480px] oveflow-hidden md:min-w-0">
+        <div className="min-w-[960px] overflow-hidden md:min-w-0">
           <svg
             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
             className="w-full"
             role="img"
-            aria-label="当日と先2日間の気圧変動"
+            aria-label="過去3日と当日・先2日間の気圧変動"
           >
             {weather.pressureDayBoundaries.map((boundaryIndex) => {
               const x = getPointX(boundaryIndex, points.length)
@@ -134,12 +170,25 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
                   y1={PAD_Y}
                   x2={x}
                   y2={CHART_HEIGHT}
+                  stroke="#cccccc"
+                  strokeWidth="0.75"
+                />
+              )
+            })}
+
+            {nowX !== null && (
+              <>
+                <line
+                  x1={nowX}
+                  y1={0}
+                  x2={nowX}
+                  y2={CHART_HEIGHT}
                   stroke="#2f2f2f"
                   strokeWidth="0.5"
                   strokeDasharray="1 2"
                 />
-              )
-            })}
+              </>
+            )}
 
             <path
               d={linePath}

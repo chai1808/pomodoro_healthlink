@@ -76,8 +76,9 @@ const getWeatherDescription = (code: number): string =>
 const getWeatherEmoji = (code: number): string =>
   WMO_EMOJI[code] ?? '🌡️'
 
-const CHART_DAYS = 3
+const PAST_DAYS = 3
 const FORECAST_DAYS = 2
+const CHART_DAYS = FORECAST_DAYS + 1
 
 type OpenMeteoResponse = {
   current: {
@@ -113,7 +114,8 @@ const buildPressurePoints = (
   hourly: OpenMeteoResponse['hourly'],
 ): PressurePoint[] => {
   const rangeStart = startOfDay(new Date())
-  const rangeEnd = new Date(rangeStart)
+  rangeStart.setDate(rangeStart.getDate() - PAST_DAYS)
+  const rangeEnd = startOfDay(new Date())
   rangeEnd.setDate(rangeEnd.getDate() + CHART_DAYS)
 
   return hourly.time
@@ -178,6 +180,7 @@ const fetchOpenMeteo = async (coords: Coordinates): Promise<OpenMeteoResponse> =
   url.searchParams.set('latitude', String(coords.lat))
   url.searchParams.set('longitude', String(coords.lon))
   url.searchParams.set('timezone', 'Asia/Tokyo')
+  url.searchParams.set('past_days', String(PAST_DAYS))
   url.searchParams.set('forecast_days', String(CHART_DAYS))
   url.searchParams.set(
     'current',
