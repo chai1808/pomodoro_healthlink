@@ -117,7 +117,7 @@ export const getForecastMaxDropText = (
 
 const SLEEP_BASELINE_DAYS = 7
 
-const calcYesterdaySleepRatio = (records: SleepRecord[]): number | null => {
+const calcTodaySleepRatio = (records: SleepRecord[]): number | null => {
   const sleepByDate = new Map<string, number>()
 
   for (const record of records) {
@@ -126,29 +126,26 @@ const calcYesterdaySleepRatio = (records: SleepRecord[]): number | null => {
   }
 
   const today = startOfDay()
-  const yesterdayKey = isoDate(addDays(today, -1))
-  const yesterdayHours = sleepByDate.get(yesterdayKey) ?? 0
+  const todayKey = isoDate(today)
+  const todayHours = sleepByDate.get(todayKey) ?? 0
 
   const hasSleepHistory = [...sleepByDate.values()].some((hours) => hours > 0)
   if (!hasSleepHistory) return null
 
   const past7Days: number[] = []
-  for (let offset = 2; offset <= SLEEP_BASELINE_DAYS + 1; offset += 1) {
+  for (let offset = 1; offset <= SLEEP_BASELINE_DAYS; offset += 1) {
     const key = isoDate(addDays(today, -offset))
     past7Days.push(sleepByDate.get(key) ?? 0)
   }
 
   if (past7Days.length < SLEEP_BASELINE_DAYS) return null
 
-  const sortedByHours = [...past7Days].sort((left, right) => left - right)
-  const trimmedDays = sortedByHours.slice(1, -1)
+  const average =
+    past7Days.reduce((sum, hours) => sum + hours, 0) / past7Days.length
 
-  const trimmedAverage =
-    trimmedDays.reduce((sum, hours) => sum + hours, 0) / trimmedDays.length
+  if (average === 0) return null
 
-  if (trimmedAverage === 0) return null
-
-  return Math.round((yesterdayHours / trimmedAverage) * 100) / 100
+  return Math.round((todayHours / average) * 100) / 100
 }
 
 const calcDisplayAvgSleepHours = (records: SleepRecord[]): number => {
@@ -263,7 +260,7 @@ export const buildHealthSnapshot = (
   activity: ActivityData,
   weather: WeatherInfo,
 ): HealthSnapshot => {
-  const sleepRatio = calcYesterdaySleepRatio(sleepRecords)
+  const sleepRatio = calcTodaySleepRatio(sleepRecords)
   const stepRatio = calcYesterdayStepRatio(activity)
   const status = evaluateHealthStatus(sleepRatio, stepRatio)
 
