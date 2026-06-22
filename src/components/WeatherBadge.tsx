@@ -193,14 +193,14 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
             <path
               d={linePath}
               fill="none"
-              stroke="#888888"
+              stroke="#e8e8e8"
               strokeWidth="0.5"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
           </svg>
 
-          <div className="relative mt-1 h-3 text-[12px] text-mono-muted">
+          <div className="relative mt-1 h-3 text-[10px] text-mono-muted">
             {daySegments.map((segment) => {
               const left =
                 (segment.start / Math.max(points.length - 1, 1)) * 100
