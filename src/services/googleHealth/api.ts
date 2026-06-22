@@ -20,7 +20,7 @@ const EMPTY_ACTIVITY: ActivityData = {
   dailySteps: [],
 }
 
-const SLEEP_LOOKBACK_DAYS = 14
+const SLEEP_LOOKBACK_DAYS = 21
 const ACTIVITY_RANGE_DAYS = 27
 
 const dedupeSleepRecordsByDate = (records: SleepRecord[]): SleepRecord[] => {
@@ -71,7 +71,7 @@ const fetchSleepRecords = async (): Promise<SleepRecord[]> => {
   )
 
   const data = await healthFetch<{ dataPoints?: HealthSleepPoint[] }>(
-    `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=50&filter=${filter}`,
+    `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=100&filter=${filter}`,
   )
 
   return dedupeSleepRecordsByDate(

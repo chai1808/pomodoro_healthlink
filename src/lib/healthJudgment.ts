@@ -128,16 +128,21 @@ const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
 
   const today = startOfDay()
   const past7Days: number[] = []
+  let recordedDays = 0
 
   for (let offset = 1; offset <= SLEEP_BASELINE_DAYS; offset += 1) {
     const key = isoDate(addDays(today, -offset))
     const hours = sleepByDate.get(key)
-    if (hours === undefined) return null
-    past7Days.push(hours)
+    if (hours !== undefined) recordedDays += 1
+    past7Days.push(hours ?? 0)
   }
+
+  if (recordedDays === 0) return null
 
   const sortedByHours = [...past7Days].sort((left, right) => left - right)
   const trimmedDays = sortedByHours.slice(1, -1)
+  if (trimmedDays.length === 0) return null
+
   const trimmedAverage =
     trimmedDays.reduce((sum, hours) => sum + hours, 0) / trimmedDays.length
 
@@ -167,8 +172,10 @@ const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
 
   const today = startOfDay()
   const yesterdayKey = isoDate(addDays(today, -1))
-  const yesterdaySteps = stepByDate.get(yesterdayKey)
-  if (yesterdaySteps === undefined) return null
+  const yesterdaySteps = stepByDate.get(yesterdayKey) ?? 0
+
+  const hasStepHistory = [...stepByDate.values()].some((steps) => steps > 0)
+  if (!hasStepHistory) return null
 
   const past7Days: Array<{ date: string; steps: number }> = []
   for (let offset = 2; offset <= 8; offset += 1) {
