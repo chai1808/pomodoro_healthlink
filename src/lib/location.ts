@@ -5,37 +5,51 @@ export type Coordinates = {
   lon: number
 }
 
-/** 公開デモ・位置情報拒否時のフォールバック（名古屋市） */
+export type LocationSource = 'geolocation' | 'cache' | 'default'
+
+export type ResolvedLocation = {
+  coords: Coordinates
+  label: string
+  source: LocationSource
+}
+
+/** 位置情報拒否時のフォールバック（名古屋市） */
 export const DEFAULT_COORDS: Coordinates = {
   lat: 35.1814,
   lon: 136.9063,
 }
 
-const readEnvCoords = (): Coordinates | null => {
-  const lat = import.meta.env.VITE_WEATHER_LAT
-  const lon = import.meta.env.VITE_WEATHER_LON
-  if (!lat || !lon) return null
+const DEFAULT_LABEL = '名古屋市'
 
-  const parsed = { lat: Number(lat), lon: Number(lon) }
-  if (Number.isNaN(parsed.lat) || Number.isNaN(parsed.lon)) return null
-  return parsed
+type ReverseGeocodeResult = {
+  results?: Array<{
+    name?: string
+    admin1?: string
+    admin2?: string
+  }>
 }
 
-const readCachedCoords = (): Coordinates | null => {
+const readCachedLocation = (): ResolvedLocation | null => {
   const raw = localStorage.getItem(STORAGE_KEYS.userLocation)
   if (!raw) return null
 
   try {
-    const parsed = JSON.parse(raw) as Coordinates
-    if (Number.isNaN(parsed.lat) || Number.isNaN(parsed.lon)) return null
+    const parsed = JSON.parse(raw) as ResolvedLocation
+    if (
+      Number.isNaN(parsed.coords.lat) ||
+      Number.isNaN(parsed.coords.lon) ||
+      !parsed.label
+    ) {
+      return null
+    }
     return parsed
   } catch {
     return null
   }
 }
 
-const cacheCoords = (coords: Coordinates): void => {
-  localStorage.setItem(STORAGE_KEYS.userLocation, JSON.stringify(coords))
+const cacheLocation = (location: ResolvedLocation): void => {
+  localStorage.setItem(STORAGE_KEYS.userLocation, JSON.stringify(location))
 }
 
 const requestGeolocation = (): Promise<Coordinates | null> =>
@@ -55,27 +69,71 @@ const requestGeolocation = (): Promise<Coordinates | null> =>
       () => resolve(null),
       {
         enableHighAccuracy: false,
-        timeout: 8000,
+        timeout: 10000,
         maximumAge: 60 * 60 * 1000,
       },
     )
   })
 
-/** 位置情報 → キャッシュ → .env → 名古屋の順で座標を決定 */
-export const resolveUserLocation = async (): Promise<Coordinates> => {
+export const reverseGeocodeLabel = async (
+  coords: Coordinates,
+): Promise<string | null> => {
+  const url = new URL('https://geocoding-api.open-meteo.com/v1/reverse')
+  url.searchParams.set('latitude', String(coords.lat))
+  url.searchParams.set('longitude', String(coords.lon))
+  url.searchParams.set('language', 'ja')
+  url.searchParams.set('count', '1')
+
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+
+    const data = (await response.json()) as ReverseGeocodeResult
+    const place = data.results?.[0]
+    if (!place) return null
+
+    return place.name ?? place.admin2 ?? place.admin1 ?? null
+  } catch {
+    return null
+  }
+}
+
+const buildResolvedLocation = async (
+  coords: Coordinates,
+  source: LocationSource,
+  fallbackLabel: string,
+): Promise<ResolvedLocation> => {
+  const geocoded = await reverseGeocodeLabel(coords)
+  return {
+    coords,
+    label: geocoded ?? fallbackLabel,
+    source,
+  }
+}
+
+/** Geolocation API → キャッシュ → 名古屋デフォルト */
+export const resolveUserLocation = async (): Promise<ResolvedLocation> => {
   const geolocated = await requestGeolocation()
   if (geolocated) {
-    cacheCoords(geolocated)
-    return geolocated
+    const location = await buildResolvedLocation(
+      geolocated,
+      'geolocation',
+      DEFAULT_LABEL,
+    )
+    cacheLocation(location)
+    return location
   }
 
-  const cached = readCachedCoords()
-  if (cached) return cached
+  const cached = readCachedLocation()
+  if (cached) {
+    return { ...cached, source: 'cache' }
+  }
 
-  const envCoords = readEnvCoords()
-  if (envCoords) return envCoords
-
-  return DEFAULT_COORDS
+  return {
+    coords: DEFAULT_COORDS,
+    label: DEFAULT_LABEL,
+    source: 'default',
+  }
 }
 
 export const clearCachedLocation = (): void => {

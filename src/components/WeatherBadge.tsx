@@ -82,6 +82,23 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
           {weather.jmaHeadline}
         </p>
       )}
+      {(weather.locationLabel || weather.jmaAreaName) && (
+        <p className="mb-3 text-[10px] text-mono-muted">
+          {weather.locationLabel && (
+            <span>
+              位置: {weather.locationLabel}
+              {weather.locationSource === 'default' && '（デフォルト）'}
+            </span>
+          )}
+          {weather.jmaAreaName && (
+            <span>
+              {weather.locationLabel ? ' · ' : ''}
+              気象庁: {weather.jmaOfficeName ? `${weather.jmaOfficeName} ` : ''}
+              {weather.jmaAreaName}
+            </span>
+          )}
+        </p>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="shrink-0 text-3xl leading-none" aria-hidden="true">

@@ -28,6 +28,10 @@ export type WeatherInfo = {
   pressureWave3Days: PressurePoint[]
   pressureDayBoundaries: number[]
   jmaHeadline?: string
+  jmaAreaName?: string
+  jmaOfficeName?: string
+  locationLabel?: string
+  locationSource?: 'geolocation' | 'cache' | 'default'
   jmaTodayWarnings?: string[]
   jmaForecastDayWarnings?: Array<{ date: string; warnings: string[] }>
 }

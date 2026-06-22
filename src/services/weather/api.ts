@@ -1,5 +1,5 @@
 import type { WeatherInfo, PressurePoint } from '../../types'
-import type { Coordinates } from '../../lib/location'
+import type { Coordinates, ResolvedLocation } from '../../lib/location'
 import {
   calcForecastDayPressureDrops,
   calcForecastMaxDrop,
@@ -71,9 +71,9 @@ const formatDayLabel = (dayOffset: number): string => {
 const attachJmaData = async (
   weather: WeatherInfo,
   chartPoints: PressurePoint[],
-  coords: Coordinates,
+  location: ResolvedLocation,
 ): Promise<WeatherInfo> => {
-  const jma = await fetchJmaWarnings(coords)
+  const jma = await fetchJmaWarnings(location.coords)
   const dayDrops = calcForecastDayPressureDrops(chartPoints, FORECAST_DAYS)
 
   const jmaForecastDayWarnings = [1, 2]
@@ -96,7 +96,11 @@ const attachJmaData = async (
 
   return {
     ...weather,
+    locationLabel: location.label,
+    locationSource: location.source,
     jmaHeadline: jma.headline,
+    jmaAreaName: jma.areaName,
+    jmaOfficeName: jma.officeName,
     jmaTodayWarnings: jma.todayWarnings,
     jmaForecastDayWarnings: jmaForecastDayWarnings,
   }
@@ -122,8 +126,10 @@ const fetchOpenMeteo = async (coords: Coordinates): Promise<OpenMeteoResponse> =
   return (await response.json()) as OpenMeteoResponse
 }
 
-export const fetchWeather = async (coords: Coordinates): Promise<WeatherInfo> => {
-  const data = await fetchOpenMeteo(coords)
+export const fetchWeather = async (
+  location: ResolvedLocation,
+): Promise<WeatherInfo> => {
+  const data = await fetchOpenMeteo(location.coords)
   const chartPoints = buildPressurePoints(data.hourly)
 
   if (chartPoints.length < 2) {
@@ -144,6 +150,6 @@ export const fetchWeather = async (coords: Coordinates): Promise<WeatherInfo> =>
       pressureDayBoundaries: buildDayBoundaries(chartPoints),
     },
     chartPoints,
-    coords,
+    location,
   )
 }

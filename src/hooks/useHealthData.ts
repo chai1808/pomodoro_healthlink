@@ -34,11 +34,11 @@ export const useHealthData = () => {
     try {
       await handleFitbitCallback()
 
-      const coords = await resolveUserLocation()
+      const location = await resolveUserLocation()
 
       const [fitbit, weather] = await Promise.all([
         fetchFitbitData(),
-        fetchWeather(coords),
+        fetchWeather(location),
       ])
 
       const snapshot = buildHealthSnapshot(

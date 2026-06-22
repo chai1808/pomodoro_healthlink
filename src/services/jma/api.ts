@@ -1,8 +1,6 @@
 import { kindCodeToLabel } from './warningCodes'
 import type { Coordinates } from '../../lib/location'
-
-const OFFICE_CODE = import.meta.env.VITE_JMA_OFFICE_CODE ?? ''
-const AREA_CODE = import.meta.env.VITE_JMA_AREA_CODE ?? ''
+import { resolveMunicipality, resolveOfficeCode } from './region'
 
 type JmaKind = {
   code?: string
@@ -38,14 +36,13 @@ type JmaForecastSeries = {
 
 export type JmaWarningState = {
   headline: string
+  areaName: string
+  officeName: string
   todayWarnings: string[]
   forecastDayWarnings: Array<{ date: string; warnings: string[] }>
 }
 
 const ACTIVE_STATUSES = new Set(['発表', '継続', '切替'])
-
-const toDecimalDegrees = ([degrees, minutes]: [number, number]): number =>
-  degrees + minutes / 60
 
 const uniqueLabels = (labels: string[]): string[] =>
   [...new Set(labels.filter(Boolean))]
@@ -75,79 +72,36 @@ const pickAreaItems = (
   return [...class20, ...class10]
 }
 
-const resolveOfficeCode = async (coords: Coordinates): Promise<string> => {
-  if (OFFICE_CODE) return OFFICE_CODE
-
-  const { lat: LAT, lon: LON } = coords
-
-  if (LAT >= 33.72 && LAT <= 35.05 && LON >= 135.73 && LON <= 136.99) {
-    return '240000'
-  }
-  if (LAT >= 34.15 && LAT <= 35.7 && LON >= 136.0 && LON <= 137.95) {
-    return '230000'
-  }
-  if (LAT >= 35.05 && LAT <= 35.95 && LON >= 138.9 && LON <= 140.9) {
-    return '130000'
-  }
-
-  const amedasRes = await fetch(
-    'https://www.jma.go.jp/bosai/amedas/const/amedastable.json',
-  )
-  if (!amedasRes.ok) return ''
-
-  const amedasTable = (await amedasRes.json()) as Record<
-    string,
-    { lat: [number, number]; lon: [number, number] }
-  >
-
-  let nearestId = ''
-  let nearestDistance = Number.POSITIVE_INFINITY
-
-  Object.entries(amedasTable).forEach(([id, station]) => {
-    if (!station.lat || !station.lon) return
-    const slat = toDecimalDegrees(station.lat)
-    const slon = toDecimalDegrees(station.lon)
-    const distance = (slat - LAT) ** 2 + (slon - LON) ** 2
-    if (distance < nearestDistance) {
-      nearestDistance = distance
-      nearestId = id
-    }
-  })
-
-  const areaRes = await fetch('https://www.jma.go.jp/bosai/common/const/area.json')
-  if (!areaRes.ok) return ''
-
-  const areaData = (await areaRes.json()) as {
-    offices: Record<string, { name: string }>
-  }
-
-  const prefCandidates = [
-    nearestId.slice(0, 2) + '0000',
-    nearestId.slice(0, 1) + '40000',
-  ]
-
-  return prefCandidates.find((code) => areaData.offices[code]) ?? ''
+const formatDateLabel = (iso: string): string => {
+  const date = new Date(iso)
+  return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
-const resolveAreaCode = async (officeCode: string): Promise<string> => {
-  if (AREA_CODE) return AREA_CODE
+const isLandWindRisk = (windText: string): boolean => {
+  const normalized = windText.replace(/\s/g, '')
+  if (!normalized.includes('強く')) return false
+  if (normalized.includes('海上') && !normalized.includes('陸上')) {
+    return normalized.includes('やや強く') && !normalized.startsWith('海上')
+  }
+  return true
+}
 
-  const forecastRes = await fetch(
+const fetchForecastSeries = async (
+  officeCode: string,
+): Promise<JmaForecastSeries | null> => {
+  const response = await fetch(
     `https://www.jma.go.jp/bosai/forecast/data/forecast/${officeCode}.json`,
   )
-  if (!forecastRes.ok) return ''
+  if (!response.ok) return null
 
-  const forecast = (await forecastRes.json()) as Array<{
+  const forecast = (await response.json()) as Array<{
     timeSeries: JmaForecastSeries[]
   }>
 
-  const dailySeries = forecast[0]?.timeSeries?.[0]
-  if (!dailySeries?.areas?.[0]?.area.code) return ''
-
-  return dailySeries.areas[0].area.code
+  return forecast[0]?.timeSeries?.[0] ?? null
 }
 
-const fetchLatestWarningReport = async (
+const fetchWarningReport = async (
   officeCode: string,
 ): Promise<JmaWarningReport | null> => {
   const response = await fetch(
@@ -165,36 +119,10 @@ const fetchLatestWarningReport = async (
   )
 }
 
-const formatDateLabel = (iso: string): string => {
-  const date = new Date(iso)
-  return `${date.getMonth() + 1}/${date.getDate()}`
-}
-
-const isLandWindRisk = (windText: string): boolean => {
-  const normalized = windText.replace(/\s/g, '')
-  if (!normalized.includes('強く')) return false
-  if (normalized.includes('海上') && !normalized.includes('陸上')) {
-    return normalized.includes('やや強く') && !normalized.startsWith('海上')
-  }
-  return true
-}
-
-const fetchForecastWindRisks = async (
-  officeCode: string,
+const fetchForecastWindRisks = (
+  dailySeries: JmaForecastSeries,
   areaCode: string,
-): Promise<Array<{ date: string; warnings: string[] }>> => {
-  const response = await fetch(
-    `https://www.jma.go.jp/bosai/forecast/data/forecast/${officeCode}.json`,
-  )
-  if (!response.ok) return []
-
-  const forecast = (await response.json()) as Array<{
-    timeSeries: JmaForecastSeries[]
-  }>
-
-  const dailySeries = forecast[0]?.timeSeries?.[0]
-  if (!dailySeries) return []
-
+): Array<{ date: string; warnings: string[] }> => {
   const targetArea =
     dailySeries.areas.find((area) => area.area.code === areaCode) ??
     dailySeries.areas[0]
@@ -228,23 +156,36 @@ export const fetchJmaWarnings = async (
 ): Promise<JmaWarningState> => {
   const empty: JmaWarningState = {
     headline: '',
+    areaName: '',
+    officeName: '',
     todayWarnings: [],
     forecastDayWarnings: [],
   }
 
   try {
-    const officeCode = await resolveOfficeCode(coords)
-    if (!officeCode) return empty
+    const office = await resolveOfficeCode(coords)
+    if (!office) return empty
 
-    const areaCode = await resolveAreaCode(officeCode)
+    const forecastSeries = await fetchForecastSeries(office.officeCode)
+    if (!forecastSeries) return empty
+
+    const municipality = await resolveMunicipality(
+      coords,
+      office.officeCode,
+      forecastSeries.areas,
+    )
+    if (!municipality) return empty
+
     const [report, forecastRisks] = await Promise.all([
-      fetchLatestWarningReport(officeCode),
-      fetchForecastWindRisks(officeCode, areaCode),
+      fetchWarningReport(office.officeCode),
+      Promise.resolve(
+        fetchForecastWindRisks(forecastSeries, municipality.areaCode),
+      ),
     ])
 
     const todayWarnings = report
       ? uniqueLabels(
-          pickAreaItems(report, areaCode).flatMap((item) =>
+          pickAreaItems(report, municipality.areaCode).flatMap((item) =>
             extractLabelsFromKinds(item.kinds),
           ),
         )
@@ -257,6 +198,8 @@ export const fetchJmaWarnings = async (
 
     return {
       headline: report?.headlineText ?? '',
+      areaName: municipality.areaName,
+      officeName: office.officeName,
       todayWarnings,
       forecastDayWarnings,
     }
