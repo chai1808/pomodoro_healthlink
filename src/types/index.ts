@@ -1,4 +1,8 @@
-export type HealthStatus = 'healthy' | 'sleep_day' | 'activity_day'
+export type HealthStatus =
+  | 'healthy'
+  | 'sleep_day'
+  | 'activity_day'
+  | 'data_unavailable'
 
 export type PomodoroMode = 'optimal' | 'reduced'
 
@@ -54,6 +58,7 @@ export type HealthSnapshot = {
   sleepRecords: SleepRecord[]
   weather: WeatherInfo
   activity: ActivityData
+  isDemoData: boolean
 }
 
 export type PomodoroConfig = {

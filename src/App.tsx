@@ -118,10 +118,12 @@ const AppContent = ({
                     records={snapshot.sleepRecords}
                     avgSleepHours={snapshot.avgSleepHours}
                     healthConfigured={healthConfigured}
+                    isDemoData={snapshot.isDemoData}
                   />
                   <ActivitySummary
                     activity={snapshot.activity}
                     healthConfigured={healthConfigured}
+                    isDemoData={snapshot.isDemoData}
                   />
                   <button
                     type="button"

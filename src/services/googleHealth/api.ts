@@ -1,6 +1,12 @@
 import type { ActivityData, SleepRecord } from '../../types'
 import { healthFetch, isHealthConnected } from './auth'
-import { formatCivilDate, formatCivilTime, isoDate, toCivilDate } from './format'
+import {
+  formatCivilDate,
+  formatCivilTime,
+  isoDate,
+  isoDateFromTimestamp,
+  toCivilDate,
+} from './format'
 import { MOCK_ACTIVITY, MOCK_SLEEP_RECORDS } from './mock'
 import type { HealthSleepPoint, HealthStepsRollup } from './types'
 
@@ -8,28 +14,36 @@ const parseSleepRecord = (item: HealthSleepPoint): SleepRecord | null => {
   const interval = item.sleep?.interval
   if (!interval) return null
 
-  const date = formatCivilDate(interval.civilEndTime) || formatCivilDate(interval.civilStartTime)
+  const date =
+    formatCivilDate(interval.civilEndTime) ||
+    formatCivilDate(interval.civilStartTime) ||
+    isoDateFromTimestamp(interval.endTime) ||
+    isoDateFromTimestamp(interval.startTime)
   if (!date) return null
+
+  const minutesAsleep = parseInt(item.sleep?.summary?.minutesAsleep ?? '0', 10)
+  if (minutesAsleep <= 0) return null
 
   return {
     date,
     sleepStart: formatCivilTime(interval.civilStartTime, interval.startTime),
     wakeTime: formatCivilTime(interval.civilEndTime, interval.endTime),
-    minutesAsleep: parseInt(item.sleep?.summary?.minutesAsleep ?? '0', 10),
+    minutesAsleep,
   }
 }
 
 const fetchSleepRecords = async (): Promise<SleepRecord[]> => {
   const end = new Date()
-  const start = new Date(end)
-  start.setDate(start.getDate() - 3)
+  end.setDate(end.getDate() + 1)
+  const start = new Date()
+  start.setDate(start.getDate() - 7)
 
   const filter = encodeURIComponent(
     `sleep.interval.civil_end_time >= "${isoDate(start)}" AND sleep.interval.civil_end_time < "${isoDate(end)}"`,
   )
 
   const data = await healthFetch<{ dataPoints?: HealthSleepPoint[] }>(
-    `/users/me/dataTypes/sleep/dataPoints?pageSize=25&filter=${filter}`,
+    `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=25&filter=${filter}`,
   )
 
   return (data.dataPoints ?? [])
@@ -71,9 +85,14 @@ const fetchActivityData = async (): Promise<ActivityData> => {
 export const fetchHealthData = async (): Promise<{
   sleepRecords: SleepRecord[]
   activity: ActivityData
+  isDemoData: boolean
 }> => {
   if (!isHealthConnected()) {
-    return { sleepRecords: MOCK_SLEEP_RECORDS, activity: MOCK_ACTIVITY }
+    return {
+      sleepRecords: MOCK_SLEEP_RECORDS,
+      activity: MOCK_ACTIVITY,
+      isDemoData: true,
+    }
   }
 
   const [sleepRecords, activity] = await Promise.all([
@@ -81,7 +100,7 @@ export const fetchHealthData = async (): Promise<{
     fetchActivityData(),
   ])
 
-  return { sleepRecords, activity }
+  return { sleepRecords, activity, isDemoData: false }
 }
 
 export {

@@ -48,7 +48,12 @@ export const useHealthData = () => {
       ])
 
       setState({
-        snapshot: buildHealthSnapshot(health.sleepRecords, health.activity, weather),
+        snapshot: buildHealthSnapshot(
+          health.sleepRecords,
+          health.activity,
+          weather,
+          health.isDemoData,
+        ),
         loading: false,
         error: null,
         healthConfigured: isHealthConfigured(),

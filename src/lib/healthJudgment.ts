@@ -144,9 +144,9 @@ export const getForecastMaxDropText = (
   return `急降下なし（${value}）`
 }
 
-const calcAvgSleepHours = (records: SleepRecord[]): number => {
+const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
   const recent = records.slice(0, 3)
-  if (recent.length === 0) return 0
+  if (recent.length === 0) return null
 
   const totalHours = recent.reduce(
     (sum, record) => sum + record.minutesAsleep / 60,
@@ -155,11 +155,11 @@ const calcAvgSleepHours = (records: SleepRecord[]): number => {
   return totalHours / recent.length
 }
 
-const calcActivityScore = (activity: ActivityData): number => {
+const calcActivityScore = (activity: ActivityData): number | null => {
   const { currentWeekSteps, last4WeeksSteps } = activity
 
   if (currentWeekSteps.length === 0 || last4WeeksSteps.length === 0) {
-    return 1
+    return null
   }
 
   const currentWeekAverage =
@@ -168,21 +168,28 @@ const calcActivityScore = (activity: ActivityData): number => {
   const baselineAverage =
     last4WeeksSteps.reduce((a, b) => a + b, 0) / last4WeeksSteps.length
 
-  if (baselineAverage === 0) return 1
+  if (baselineAverage === 0) return null
 
   return Math.round((currentWeekAverage / baselineAverage) * 100) / 100
 }
 
 const evaluateHealthStatus = (
-  avgSleepHours: number,
-  activityScore: number,
+  avgSleepHours: number | null,
+  activityScore: number | null,
+  isDemoData: boolean,
 ): HealthStatus => {
+  if (!isDemoData && (avgSleepHours === null || activityScore === null)) {
+    return 'data_unavailable'
+  }
+
+  const sleepHours = avgSleepHours ?? 0
+  const score = activityScore ?? 0
+
   const isHealthy =
-    avgSleepHours >= MIN_HEALTHY_SLEEP_HOURS &&
-    activityScore >= MIN_ACTIVITY_SCORE
+    sleepHours >= MIN_HEALTHY_SLEEP_HOURS && score >= MIN_ACTIVITY_SCORE
 
   if (isHealthy) return 'healthy'
-  if (avgSleepHours < MIN_HEALTHY_SLEEP_HOURS) return 'sleep_day'
+  if (sleepHours < MIN_HEALTHY_SLEEP_HOURS) return 'sleep_day'
   return 'activity_day'
 }
 
@@ -208,10 +215,15 @@ export const buildHealthSnapshot = (
   sleepRecords: SleepRecord[],
   activity: ActivityData,
   weather: WeatherInfo,
+  isDemoData = false,
 ): HealthSnapshot => {
-  const avgSleepHours = calcAvgSleepHours(sleepRecords)
+  const avgSleepHours = calcAvgSleepHours(sleepRecords) ?? 0
   const activityScore = calcActivityScore(activity)
-  const status = evaluateHealthStatus(avgSleepHours, activityScore)
+  const status = evaluateHealthStatus(
+    calcAvgSleepHours(sleepRecords),
+    activityScore,
+    isDemoData,
+  )
   const jmaForecastLabels = [
     ...new Set(
       (weather.jmaForecastDayWarnings ?? []).flatMap((day) => day.warnings),
@@ -235,5 +247,6 @@ export const buildHealthSnapshot = (
     sleepRecords,
     weather,
     activity,
+    isDemoData,
   }
 }

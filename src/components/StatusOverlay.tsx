@@ -17,6 +17,11 @@ const STATUS_COPY: Record<
     title: '運動日',
     subtitle: '活動量が基準未満のため、本日は運動を優先してください',
   },
+  data_unavailable: {
+    title: 'データ取得中',
+    subtitle:
+      'Google Health から睡眠・歩数を取得できませんでした。Fitbit アプリで同期後、再読み込みしてください',
+  },
 }
 
 export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
