@@ -118,7 +118,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
       </div>
 
       <div className="mt-3 w-full overflow-x-auto md:overflow-visible">
-        <div className="min-w-[480px] md:min-w-0">
+        <div className="min-w-[480px] md:min-w-0 oveflow-y-hidden">
           <svg
             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
             className="w-full"
