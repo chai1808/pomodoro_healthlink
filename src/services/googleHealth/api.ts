@@ -20,6 +20,8 @@ const EMPTY_ACTIVITY: ActivityData = {
   dailySteps: [],
 }
 
+const SLEEP_LOOKBACK_DAYS = 14
+const SLEEP_RECORD_LIMIT = 3
 const ACTIVITY_RANGE_DAYS = 27
 
 const parseSleepRecord = (item: HealthSleepPoint): SleepRecord | null => {
@@ -48,20 +50,21 @@ const fetchSleepRecords = async (): Promise<SleepRecord[]> => {
   const end = new Date()
   end.setDate(end.getDate() + 1)
   const start = new Date()
-  start.setDate(start.getDate() - 7)
+  start.setDate(start.getDate() - SLEEP_LOOKBACK_DAYS)
 
   const filter = encodeURIComponent(
     `sleep.interval.civil_end_time >= "${isoDate(start)}" AND sleep.interval.civil_end_time < "${isoDate(end)}"`,
   )
 
   const data = await healthFetch<{ dataPoints?: HealthSleepPoint[] }>(
-    `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=25&filter=${filter}`,
+    `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=50&filter=${filter}`,
   )
 
   return (data.dataPoints ?? [])
     .map(parseSleepRecord)
     .filter((record): record is SleepRecord => record !== null)
-    .slice(0, 3)
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, SLEEP_RECORD_LIMIT)
 }
 
 const buildActivityData = (dailySteps: DailySteps[]): ActivityData => ({
@@ -89,6 +92,26 @@ const parseRollupSteps = (raw: HealthStepsRollupPoint[]): DailySteps[] => {
     .filter((day): day is DailySteps => day !== null)
     .filter((day) => day.date <= today)
     .sort((left, right) => left.date.localeCompare(right.date))
+}
+
+const fillDailyStepGaps = (
+  dailySteps: DailySteps[],
+  rangeStart: Date,
+): DailySteps[] => {
+  const byDate = new Map(dailySteps.map((day) => [day.date, day.steps]))
+  const cursor = new Date(rangeStart)
+  cursor.setHours(0, 0, 0, 0)
+  const end = new Date()
+  end.setHours(0, 0, 0, 0)
+  const filled: DailySteps[] = []
+
+  while (cursor <= end) {
+    const date = isoDate(cursor)
+    filled.push({ date, steps: byDate.get(date) ?? 0 })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  return filled
 }
 
 const parseStepsListPoint = (
@@ -149,7 +172,7 @@ const fetchActivityViaDailyRollUp = async (): Promise<{
   raw: HealthStepsRollupPoint[]
   activity: ActivityData
 }> => {
-  const { requestBody } = buildActivityRange()
+  const { requestBody, rangeStart } = buildActivityRange()
 
   const data = await healthFetch<HealthStepsRollup>(
     '/users/me/dataTypes/steps/dataPoints:dailyRollUp',
@@ -161,7 +184,8 @@ const fetchActivityViaDailyRollUp = async (): Promise<{
   )
 
   const raw = data.rollupDataPoints ?? []
-  return { raw, activity: buildActivityData(parseRollupSteps(raw)) }
+  const dailySteps = fillDailyStepGaps(parseRollupSteps(raw), rangeStart)
+  return { raw, activity: buildActivityData(dailySteps) }
 }
 
 const fetchActivityViaList = async (): Promise<ActivityData> => {
@@ -179,7 +203,9 @@ const fetchActivityViaList = async (): Promise<ActivityData> => {
     .map(parseStepsListPoint)
     .filter((point): point is { date: string; steps: number } => point !== null)
 
-  return buildActivityData(aggregateStepsByDate(points))
+  return buildActivityData(
+    fillDailyStepGaps(aggregateStepsByDate(points), rangeStart),
+  )
 }
 
 const fetchActivityData = async (): Promise<ActivityData> => {

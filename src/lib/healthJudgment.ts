@@ -156,10 +156,7 @@ const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
   const past6Days: Array<{ date: string; steps: number }> = []
   for (let offset = 2; offset <= 7; offset += 1) {
     const key = isoDate(addDays(today, -offset))
-    const steps = stepByDate.get(key)
-    console.log(steps);
-    if (steps === undefined) return null
-    past6Days.push({ date: key, steps })
+    past6Days.push({ date: key, steps: stepByDate.get(key) ?? 0 })
   }
 
   if (past6Days.length < 6) return null
