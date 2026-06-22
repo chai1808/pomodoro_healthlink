@@ -76,7 +76,7 @@ const getWeatherDescription = (code: number): string =>
 const getWeatherEmoji = (code: number): string =>
   WMO_EMOJI[code] ?? '🌡️'
 
-const PAST_DAYS = 3
+const PAST_DAYS = 2
 const FORECAST_DAYS = 2
 const CHART_DAYS = FORECAST_DAYS + 1
 
