@@ -167,7 +167,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
                 <line
                   key={boundaryIndex}
                   x1={x}
-                  y1="1"
+                  y1={1}
                   x2={x}
                   y2={CHART_HEIGHT}
                   stroke="#2f2f2f"
@@ -180,7 +180,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
               <>
                 <line
                   x1={nowX}
-                  y1={0}
+                  y1={1}
                   x2={nowX}
                   y2={CHART_HEIGHT}
                   stroke="#2f2f2f"
