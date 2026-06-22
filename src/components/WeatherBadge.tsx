@@ -183,7 +183,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
                   y1={1}
                   x2={nowX}
                   y2={CHART_HEIGHT}
-                  stroke="#c4a574"
+                  stroke="#7ecfc4"
                   strokeWidth="1"
                   strokeDasharray="1 2"
                 />
