@@ -116,7 +116,7 @@ export const handleOAuthCallback = async (): Promise<boolean> => {
   if (!success) return false
 
   sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier)
-  window.history.replaceState({}, '', window.location.pathname)
+  window.history.replaceState({}, '', '/')
   return true
 }
 
