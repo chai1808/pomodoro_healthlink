@@ -109,7 +109,7 @@ const AppContent = ({
                 onClick={onCloseDetails}
               />
               <aside
-                className="overflow-hidden details-sheet fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-mono-border bg-mono-bg px-4 pt-4 pb-8 sm:px-6"
+                className="overflow-hidden details-sheet fixed inset-x-0 bottom-0 z-50 max-h-[100dvh] overflow-y-auto rounded-t-2xl border-t border-mono-border bg-mono-bg px-4 pt-4 pb-8 sm:px-6"
                 aria-label="詳細データ"
               >
                 <div className="space-y-3">
