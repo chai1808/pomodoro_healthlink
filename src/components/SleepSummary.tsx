@@ -7,7 +7,7 @@ type SleepSummaryProps = {
   healthConnected: boolean
 }
 
-const DISPLAY_DAYS = 7
+const DISPLAY_DAYS = 8
 
 const isValidSleepRecord = (record: SleepRecord): boolean =>
   /^\d{4}-\d{2}-\d{2}$/.test(record.date) && record.minutesAsleep > 0
