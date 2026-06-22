@@ -28,6 +28,7 @@ export const POMODORO_CONFIGS = {
 export const STORAGE_KEYS = {
   googleHealthAccessToken: 'healthlink_google_health_access_token',
   googleHealthRefreshToken: 'healthlink_google_health_refresh_token',
+  oauthProcessedCode: 'healthlink_oauth_processed_code',
   dailyUsage: 'healthlink_daily_usage',
   pkceVerifier: 'healthlink_pkce_verifier',
   userLocation: 'healthlink_user_location',

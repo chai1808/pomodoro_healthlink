@@ -167,7 +167,7 @@ export default function App() {
     )
   }
 
-  if (error || !snapshot) {
+  if (!snapshot) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 px-6">
         <p className="text-sm text-mono-muted">{error ?? 'データがありません'}</p>
@@ -188,7 +188,16 @@ export default function App() {
   }
 
   return (
-    <AppContent
+    <>
+      {error && (
+        <p
+          className="fixed inset-x-4 top-4 z-50 rounded-lg border border-mono-border bg-mono-surface px-4 py-3 text-center text-xs text-mono-muted"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+      <AppContent
       key={snapshot.pomodoroMode}
       snapshot={snapshot}
       showDetails={showDetails}
@@ -198,5 +207,6 @@ export default function App() {
       healthConnected={healthConnected}
       onDisconnect={handleDisconnect}
     />
+    </>
   )
 }

@@ -10,6 +10,10 @@ const SCOPES = [
   'https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly',
 ]
 
+export type OAuthCallbackResult =
+  | { ok: true }
+  | { ok: false; message: string }
+
 const getAccessToken = (): string | null =>
   localStorage.getItem(STORAGE_KEYS.googleHealthAccessToken)
 
@@ -51,6 +55,7 @@ export const startHealthAuth = async (): Promise<void> => {
 
   const { verifier, challenge } = await createPkce()
   sessionStorage.setItem(STORAGE_KEYS.pkceVerifier, verifier)
+  sessionStorage.removeItem(STORAGE_KEYS.oauthProcessedCode)
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -70,18 +75,37 @@ export const startHealthAuth = async (): Promise<void> => {
 export const disconnectHealth = (): void => {
   localStorage.removeItem(STORAGE_KEYS.googleHealthAccessToken)
   localStorage.removeItem(STORAGE_KEYS.googleHealthRefreshToken)
+  sessionStorage.removeItem(STORAGE_KEYS.oauthProcessedCode)
 }
 
-const exchangeToken = async (body: URLSearchParams): Promise<boolean> => {
-  const response = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  })
+const parseTokenError = async (response: Response): Promise<string> => {
+  const text = await response.text()
+  try {
+    const data = JSON.parse(text) as { error?: string; error_description?: string }
+    if (data.error_description) return data.error_description
+    if (data.error) return data.error
+  } catch {
+    if (text) return text.slice(0, 120)
+  }
+  return `HTTP ${response.status}`
+}
+
+const exchangeToken = async (body: URLSearchParams): Promise<{ ok: true } | { ok: false; message: string }> => {
+  let response: Response
+  try {
+    response = await fetch(TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+  } catch {
+    return { ok: false, message: 'トークン API に接続できませんでした' }
+  }
 
   if (!response.ok) {
-    console.warn('[google-health] token failed:', response.status, await response.text())
-    return false
+    const message = await parseTokenError(response)
+    console.warn('[google-health] token failed:', message)
+    return { ok: false, message }
   }
 
   const data = (await response.json()) as {
@@ -89,29 +113,35 @@ const exchangeToken = async (body: URLSearchParams): Promise<boolean> => {
     refresh_token?: string
   }
   storeTokens(data.access_token, data.refresh_token)
-  return true
+  return { ok: true }
 }
 
-export const handleOAuthCallback = async (): Promise<boolean> => {
+export const handleOAuthCallback = async (): Promise<OAuthCallbackResult> => {
   const params = new URLSearchParams(window.location.search)
   const oauthError = params.get('error')
   if (oauthError) {
-    console.warn('[google-health] oauth error:', oauthError, params.get('error_description'))
+    const description = params.get('error_description') ?? oauthError
     window.history.replaceState({}, '', '/')
-    return false
+    return { ok: false, message: description }
   }
 
   const code = params.get('code')
-  if (!code) return false
+  if (!code) return { ok: true }
+
+  if (sessionStorage.getItem(STORAGE_KEYS.oauthProcessedCode) === code) {
+    window.history.replaceState({}, '', '/')
+    return isHealthConnected() ? { ok: true } : { ok: false, message: '認可コードの処理に失敗しました' }
+  }
 
   const verifier = sessionStorage.getItem(STORAGE_KEYS.pkceVerifier)
   if (!verifier) {
-    console.warn('[google-health] pkce verifier missing')
     window.history.replaceState({}, '', '/')
-    return false
+    return { ok: false, message: '認可セッションが切れました。もう一度連携してください' }
   }
 
-  const success = await exchangeToken(
+  sessionStorage.setItem(STORAGE_KEYS.oauthProcessedCode, code)
+
+  const result = await exchangeToken(
     new URLSearchParams({
       client_id: CLIENT_ID,
       grant_type: 'authorization_code',
@@ -123,20 +153,28 @@ export const handleOAuthCallback = async (): Promise<boolean> => {
 
   sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier)
   window.history.replaceState({}, '', '/')
-  return success
+
+  if (!result.ok) {
+    sessionStorage.removeItem(STORAGE_KEYS.oauthProcessedCode)
+    return { ok: false, message: result.message }
+  }
+
+  return { ok: true }
 }
 
-const refreshAccessToken = (): Promise<boolean> => {
+const refreshAccessToken = async (): Promise<boolean> => {
   const refreshToken = getRefreshToken()
-  if (!refreshToken) return Promise.resolve(false)
+  if (!refreshToken) return false
 
-  return exchangeToken(
+  const result = await exchangeToken(
     new URLSearchParams({
       client_id: CLIENT_ID,
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
     }),
   )
+
+  return result.ok
 }
 
 export const resolveAccessToken = async (): Promise<string | null> => {
