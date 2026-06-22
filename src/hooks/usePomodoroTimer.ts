@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { formatElapsed, minutesToSeconds } from '../lib/formatTime'
+import { formatElapsed, minutesToSeconds } from '../lib/utils'
 import { playPhaseSwitchSound } from '../lib/sound'
 import { showTimerNotification } from '../lib/notifications'
 import {

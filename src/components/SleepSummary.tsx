@@ -1,5 +1,5 @@
 import type { SleepRecord } from '../types'
-import { isoDate } from '../services/googleHealth/format'
+import { isoDate } from '../lib/utils'
 
 type SleepSummaryProps = {
   records: SleepRecord[]

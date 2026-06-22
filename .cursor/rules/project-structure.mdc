@@ -1,0 +1,43 @@
+---
+description: Vanilla に近い React 設計 — 5フォルダ地図と分割ルール
+alwaysApply: true
+---
+
+# プロジェクト構造（最小限の地図）
+
+このプロジェクトは **説明できること** を最優先する。過剰な抽象化・分割は禁止。
+
+## 5フォルダの役割
+
+| フォルダ | 役割 | 例 |
+|---------|------|-----|
+| `App.tsx` | 画面の組み立てのみ | JSX の配置、props の受け渡し |
+| `components/` | 見た目（UI） | TimerCircle, WeatherBadge |
+| `hooks/` | 状態・データ取得の入口 | useHealthData, usePomodoroTimer |
+| `lib/` | ビジネスルール・共通処理 | healthJudgment, constants, utils |
+| `services/` | 外部 API 専用 | googleHealth, weather, jma |
+
+## 分割ルール
+
+- **新規ファイルを作る前に** 既存ファイル内で完結できないか検討する
+- 1ファイルが **300行を超えたとき初めて** 分割を提案する
+- 定数・ヘルパーは **2箇所以上で使う場合のみ** 抽出（`lib/constants.ts` / `lib/utils.ts`）
+- `services/` 内は **外部 API 1つ = フォルダ1つ**、中身は `api.ts` + 必要なら `auth.ts` まで
+- コード表・ラベル変換など小さなデータは **同じ api.ts 内** に置く（別ファイルにしない）
+- リファクタと機能追加を **同じ PR / 同じ依頼で行わない**
+
+## AI への依頼時
+
+変更前に「触るファイルと理由」を先に書く。例:
+
+```
+- lib/healthJudgment.ts … 判定ロジック修正
+- 新規ファイルは作らない
+```
+
+## 避けるパターン
+
+- `utils/` を細かく分割（formatTime.ts, dateHelpers.ts 等）
+- 使い1回の定数ファイル
+- 抽象クラス・ファクトリ・過剰な型レイヤー
+- components 内に API 呼び出しを直接書く

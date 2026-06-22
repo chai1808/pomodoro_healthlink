@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from './constants'
-import { getTodayKey } from './formatTime'
+import { getTodayKey } from './utils'
 import type { DailyUsage } from '../types'
 
 export const loadDailyUsage = (): DailyUsage => {

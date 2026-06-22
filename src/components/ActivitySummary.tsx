@@ -1,5 +1,5 @@
 import type { ActivityData } from '../types'
-import { isoDate } from '../services/googleHealth/format'
+import { isoDate } from '../lib/utils'
 
 type ActivitySummaryProps = {
   activity: ActivityData

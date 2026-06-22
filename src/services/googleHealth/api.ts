@@ -1,18 +1,78 @@
 import type { ActivityData, DailySteps, SleepRecord } from '../../types'
+import { isoDate, isoDateFromTimestamp } from '../../lib/utils'
 import { healthFetch, isHealthConnected } from './auth'
-import {
-  formatCivilDate,
-  formatCivilTime,
-  isoDate,
-  isoDateFromTimestamp,
-  toCivilDateTimeStart,
-} from './format'
-import type {
-  HealthSleepPoint,
-  HealthStepsPoint,
-  HealthStepsRollup,
-  HealthStepsRollupPoint,
-} from './types'
+
+type CivilDate = { year?: number; month?: number; day?: number }
+type CivilTime = {
+  hours?: number
+  minutes?: number
+  seconds?: number
+  nanos?: number
+}
+type CivilDateTime = { date?: CivilDate; time?: CivilTime }
+
+type HealthSleepInterval = {
+  startTime?: string
+  endTime?: string
+  civilStartTime?: CivilDateTime
+  civilEndTime?: CivilDateTime
+}
+
+type HealthSleepPoint = {
+  sleep?: {
+    interval?: HealthSleepInterval
+    summary?: { minutesAsleep?: string }
+  }
+}
+
+type HealthStepsRollupPoint = {
+  civilStartTime?: CivilDateTime
+  civilEndTime?: CivilDateTime
+  steps?: { countSum?: string }
+}
+
+type HealthStepsRollup = {
+  rollupDataPoints?: HealthStepsRollupPoint[]
+}
+
+type HealthStepsInterval = {
+  startTime?: string
+  endTime?: string
+  civilStartTime?: CivilDateTime
+  civilEndTime?: CivilDateTime
+}
+
+type HealthStepsPoint = {
+  steps?: {
+    count?: string
+    countSum?: string
+    interval?: HealthStepsInterval
+  }
+}
+
+const formatCivilDate = (civil?: CivilDateTime): string => {
+  if (!civil?.date) return ''
+  const { year, month, day } = civil.date
+  if (!year || !month || !day) return ''
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+const formatCivilTime = (civil?: CivilDateTime, iso?: string): string => {
+  if (civil) {
+    const h = civil.time?.hours ?? 0
+    const m = civil.time?.minutes ?? 0
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  }
+  if (!iso) return '--:--'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '--:--'
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+const toCivilDateTimeStart = (date: Date): CivilDateTime => ({
+  date: { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() },
+  time: { hours: 0, minutes: 0, seconds: 0, nanos: 0 },
+})
 
 const EMPTY_ACTIVITY: ActivityData = {
   currentWeekSteps: [],
@@ -256,4 +316,4 @@ export {
   startHealthAuth,
 } from './auth'
 
-export type { OAuthCallbackResult } from './types'
+export type { OAuthCallbackResult } from './auth'

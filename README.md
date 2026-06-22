@@ -87,14 +87,50 @@ npm run dev
 
 ## プロジェクト構成
 
+Vanilla（`index.html` + `script.js`）に近い **5フォルダ構成** で整理しています。  
+「どこに何があるか」を覚える地図として使ってください。
+
 ```
-api/google/token.js     # OAuth トークン交換
+api/                          # サーバー（OAuth トークン交換のみ）
 src/
-├── lib/healthJudgment.ts   # 体調・気圧・ポモドーロ判定
-├── services/googleHealth/  # Fitbit / Google Health API
-├── services/weather/       # Open-Meteo
-└── components/             # TimerCircle, WeatherBadge 等
+├── App.tsx                   # 画面の組み立て
+├── components/               # 見た目（UI 部品）
+├── hooks/                    # データ取得・タイマー状態
+├── lib/                      # ビジネスルール・共通処理
+│   ├── healthJudgment.ts     # 体調・気圧・ポモドーロ判定（コアロジック）
+│   ├── constants.ts          # 閾値・設定（README の表と対応）
+│   └── utils.ts              # 日付・時間フォーマット
+├── services/                 # 外部 API（中身は触らない）
+│   ├── googleHealth/         # auth.ts（OAuth）+ api.ts（データ取得）
+│   ├── weather/api.ts        # Open-Meteo + 天気コード
+│   └── jma/                  # 気象庁 API + 地域解決
+└── types/index.ts            # 型定義
 ```
+
+### データの流れ
+
+```
+起動 (main.tsx → App.tsx)
+  │
+  ├─ useHealthData (hooks/)
+  │    ├─ resolveUserLocation     → lib/location.ts
+  │    ├─ fetchHealthData         → services/googleHealth/api.ts
+  │    ├─ fetchWeather            → services/weather/api.ts
+  │    └─ buildHealthSnapshot     → lib/healthJudgment.ts
+  │
+  └─ usePomodoroTimer (hooks/)
+       ├─ getPomodoroConfig       → lib/healthJudgment.ts + constants.ts
+       └─ components/             → TimerCircle, TimerControls 等
+```
+
+面接・説明用の一言: **「hooks がデータを集め、lib が判定し、components が表示する」**
+
+### 設計方針
+
+- 新規ファイルは **300行超・または外部 API 追加時** のみ作成
+- 定数化は **2箇所以上で使う値** のみ（`constants.ts` に集約）
+- リファクタと機能追加は **同時に行わない**
+- 詳細は `.cursor/rules/project-structure.mdc` を参照
 
 ## ビルド・公開
 
