@@ -1,6 +1,5 @@
 import {
   MIN_ACTIVITY_SCORE,
-  MIN_HEALTHY_SLEEP_HOURS,
   MAX_DROP_THRESHOLD,
   PRESSURE_RANGE_THRESHOLD,
   POMODORO_CONFIGS,
@@ -118,7 +117,7 @@ export const getForecastMaxDropText = (
 
 const SLEEP_BASELINE_DAYS = 7
 
-const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
+const calcYesterdaySleepRatio = (records: SleepRecord[]): number | null => {
   const sleepByDate = new Map<string, number>()
 
   for (const record of records) {
@@ -127,26 +126,49 @@ const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
   }
 
   const today = startOfDay()
-  const past7Days: number[] = []
-  let recordedDays = 0
+  const yesterdayKey = isoDate(addDays(today, -1))
+  const yesterdayHours = sleepByDate.get(yesterdayKey) ?? 0
 
-  for (let offset = 1; offset <= SLEEP_BASELINE_DAYS; offset += 1) {
+  const hasSleepHistory = [...sleepByDate.values()].some((hours) => hours > 0)
+  if (!hasSleepHistory) return null
+
+  const past7Days: number[] = []
+  for (let offset = 2; offset <= SLEEP_BASELINE_DAYS + 1; offset += 1) {
     const key = isoDate(addDays(today, -offset))
-    const hours = sleepByDate.get(key)
-    if (hours !== undefined) recordedDays += 1
-    past7Days.push(hours ?? 0)
+    past7Days.push(sleepByDate.get(key) ?? 0)
   }
 
-  if (recordedDays === 0) return null
+  if (past7Days.length < SLEEP_BASELINE_DAYS) return null
 
   const sortedByHours = [...past7Days].sort((left, right) => left - right)
   const trimmedDays = sortedByHours.slice(1, -1)
-  if (trimmedDays.length === 0) return null
 
   const trimmedAverage =
     trimmedDays.reduce((sum, hours) => sum + hours, 0) / trimmedDays.length
 
-  return trimmedAverage
+  if (trimmedAverage === 0) return null
+
+  return Math.round((yesterdayHours / trimmedAverage) * 100) / 100
+}
+
+const calcDisplayAvgSleepHours = (records: SleepRecord[]): number => {
+  const today = isoDate(startOfDay())
+  const recent = records
+    .filter(
+      (record) =>
+        /^\d{4}-\d{2}-\d{2}$/.test(record.date) &&
+        record.date <= today &&
+        record.minutesAsleep > 0,
+    )
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, 8)
+
+  if (recent.length === 0) return 0
+
+  return (
+    recent.reduce((sum, record) => sum + record.minutesAsleep / 60, 0) /
+    recent.length
+  )
 }
 
 const isoDate = (date: Date): string => {
@@ -197,18 +219,18 @@ const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
 }
 
 const evaluateHealthStatus = (
-  avgSleepHours: number | null,
+  sleepRatio: number | null,
   stepRatio: number | null,
 ): HealthStatus => {
-  if (avgSleepHours === null || stepRatio === null) {
+  if (sleepRatio === null || stepRatio === null) {
     return 'data_unavailable'
   }
 
-  if (avgSleepHours >= MIN_HEALTHY_SLEEP_HOURS && stepRatio >= MIN_ACTIVITY_SCORE) {
+  if (sleepRatio >= MIN_ACTIVITY_SCORE && stepRatio >= MIN_ACTIVITY_SCORE) {
     return 'healthy'
   }
 
-  if (avgSleepHours <= MIN_HEALTHY_SLEEP_HOURS) {
+  if (sleepRatio < MIN_ACTIVITY_SCORE) {
     return 'sleep_day'
   }
 
@@ -241,9 +263,9 @@ export const buildHealthSnapshot = (
   activity: ActivityData,
   weather: WeatherInfo,
 ): HealthSnapshot => {
-  const avgSleepHours = calcAvgSleepHours(sleepRecords)
+  const sleepRatio = calcYesterdaySleepRatio(sleepRecords)
   const stepRatio = calcYesterdayStepRatio(activity)
-  const status = evaluateHealthStatus(avgSleepHours, stepRatio)
+  const status = evaluateHealthStatus(sleepRatio, stepRatio)
 
   const pomodoroMode =
     status === 'healthy'
@@ -251,7 +273,7 @@ export const buildHealthSnapshot = (
       : 'reduced'
 
   return {
-    avgSleepHours: avgSleepHours ?? 0,
+    avgSleepHours: calcDisplayAvgSleepHours(sleepRecords),
     status,
     pomodoroMode,
     sleepRecords,

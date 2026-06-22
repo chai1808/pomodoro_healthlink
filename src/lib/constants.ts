@@ -1,4 +1,3 @@
-export const MIN_HEALTHY_SLEEP_HOURS = 7
 export const MIN_ACTIVITY_SCORE = 0.7
 
 export const PRESSURE_RANGE_THRESHOLD = 4
