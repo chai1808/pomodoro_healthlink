@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { buildHealthSnapshot } from '../lib/healthJudgment'
+import { resolveUserLocation } from '../lib/location'
 import {
   fetchFitbitData,
   handleFitbitCallback,
@@ -33,9 +34,11 @@ export const useHealthData = () => {
     try {
       await handleFitbitCallback()
 
+      const coords = await resolveUserLocation()
+
       const [fitbit, weather] = await Promise.all([
         fetchFitbitData(),
-        fetchWeather(),
+        fetchWeather(coords),
       ])
 
       const snapshot = buildHealthSnapshot(

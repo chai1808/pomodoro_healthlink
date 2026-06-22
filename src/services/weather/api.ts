@@ -1,4 +1,5 @@
 import type { WeatherInfo, PressurePoint } from '../../types'
+import type { Coordinates } from '../../lib/location'
 import {
   calcForecastDayPressureDrops,
   calcForecastMaxDrop,
@@ -7,9 +8,6 @@ import {
 import { MAX_DROP_THRESHOLD } from '../../lib/constants'
 import { fetchJmaWarnings } from '../jma/api'
 import { getWeatherDescription, getWeatherEmoji } from './weatherCodes'
-
-const LAT = Number(import.meta.env.VITE_WEATHER_LAT ?? '35.6762')
-const LON = Number(import.meta.env.VITE_WEATHER_LON ?? '139.6503')
 
 const CHART_DAYS = 3
 const FORECAST_DAYS = 2
@@ -73,8 +71,9 @@ const formatDayLabel = (dayOffset: number): string => {
 const attachJmaData = async (
   weather: WeatherInfo,
   chartPoints: PressurePoint[],
+  coords: Coordinates,
 ): Promise<WeatherInfo> => {
-  const jma = await fetchJmaWarnings()
+  const jma = await fetchJmaWarnings(coords)
   const dayDrops = calcForecastDayPressureDrops(chartPoints, FORECAST_DAYS)
 
   const jmaForecastDayWarnings = [1, 2]
@@ -103,10 +102,10 @@ const attachJmaData = async (
   }
 }
 
-const fetchOpenMeteo = async (): Promise<OpenMeteoResponse> => {
+const fetchOpenMeteo = async (coords: Coordinates): Promise<OpenMeteoResponse> => {
   const url = new URL('https://api.open-meteo.com/v1/forecast')
-  url.searchParams.set('latitude', String(LAT))
-  url.searchParams.set('longitude', String(LON))
+  url.searchParams.set('latitude', String(coords.lat))
+  url.searchParams.set('longitude', String(coords.lon))
   url.searchParams.set('timezone', 'Asia/Tokyo')
   url.searchParams.set('forecast_days', String(CHART_DAYS))
   url.searchParams.set(
@@ -123,8 +122,8 @@ const fetchOpenMeteo = async (): Promise<OpenMeteoResponse> => {
   return (await response.json()) as OpenMeteoResponse
 }
 
-export const fetchWeather = async (): Promise<WeatherInfo> => {
-  const data = await fetchOpenMeteo()
+export const fetchWeather = async (coords: Coordinates): Promise<WeatherInfo> => {
+  const data = await fetchOpenMeteo(coords)
   const chartPoints = buildPressurePoints(data.hourly)
 
   if (chartPoints.length < 2) {
@@ -145,5 +144,6 @@ export const fetchWeather = async (): Promise<WeatherInfo> => {
       pressureDayBoundaries: buildDayBoundaries(chartPoints),
     },
     chartPoints,
+    coords,
   )
 }

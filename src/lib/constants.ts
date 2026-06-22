@@ -29,4 +29,5 @@ export const STORAGE_KEYS = {
   fitbitToken: 'healthlink_fitbit_token',
   dailyUsage: 'healthlink_daily_usage',
   pkceVerifier: 'healthlink_pkce_verifier',
+  userLocation: 'healthlink_user_location',
 } as const

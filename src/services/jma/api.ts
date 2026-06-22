@@ -1,9 +1,8 @@
 import { kindCodeToLabel } from './warningCodes'
+import type { Coordinates } from '../../lib/location'
 
 const OFFICE_CODE = import.meta.env.VITE_JMA_OFFICE_CODE ?? ''
 const AREA_CODE = import.meta.env.VITE_JMA_AREA_CODE ?? ''
-const LAT = Number(import.meta.env.VITE_WEATHER_LAT ?? '35.6762')
-const LON = Number(import.meta.env.VITE_WEATHER_LON ?? '139.6503')
 
 type JmaKind = {
   code?: string
@@ -76,8 +75,10 @@ const pickAreaItems = (
   return [...class20, ...class10]
 }
 
-const resolveOfficeCode = async (): Promise<string> => {
+const resolveOfficeCode = async (coords: Coordinates): Promise<string> => {
   if (OFFICE_CODE) return OFFICE_CODE
+
+  const { lat: LAT, lon: LON } = coords
 
   if (LAT >= 33.72 && LAT <= 35.05 && LON >= 135.73 && LON <= 136.99) {
     return '240000'
@@ -222,7 +223,9 @@ const fetchForecastWindRisks = async (
     .filter((item): item is { date: string; warnings: string[] } => item !== null)
 }
 
-export const fetchJmaWarnings = async (): Promise<JmaWarningState> => {
+export const fetchJmaWarnings = async (
+  coords: Coordinates,
+): Promise<JmaWarningState> => {
   const empty: JmaWarningState = {
     headline: '',
     todayWarnings: [],
@@ -230,7 +233,7 @@ export const fetchJmaWarnings = async (): Promise<JmaWarningState> => {
   }
 
   try {
-    const officeCode = await resolveOfficeCode()
+    const officeCode = await resolveOfficeCode(coords)
     if (!officeCode) return empty
 
     const areaCode = await resolveAreaCode(officeCode)

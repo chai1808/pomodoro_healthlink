@@ -71,14 +71,28 @@ cp .env.example .env
 npm run dev
 ```
 
+### 位置情報（他の人も使える設計）
+
+天気・気圧・気象庁注意報の位置は、**利用者ごとに**次の優先順位で決まります。
+
+1. **ブラウザの位置情報**（許可された場合）
+2. **前回取得した座標**（localStorage に1時間キャッシュ）
+3. **`.env` の `VITE_WEATHER_LAT/LON`**（位置情報拒否時のフォールバック）
+4. **名古屋市**（35.1814, 136.9063）— 上記すべて不可のとき
+
+公開デモとして GitHub Pages 等に載せても、訪問者は**自分の位置**の天気が表示されます（位置情報を許可した場合）。  
+Fitbit データは各ユーザーのブラウザ内のみで、未連携時は全員同じデモデータです。
+
+> 本番公開時は **HTTPS** が必要です（位置情報 API の要件）。`localhost` は開発時のみ HTTP 可。
+
 ### 環境変数
 
 | 変数 | 必須 | 説明 |
 |------|------|------|
-| `VITE_WEATHER_LAT` / `VITE_WEATHER_LON` | 推奨 | 位置（Open-Meteo・気象庁推定） |
+| `VITE_WEATHER_LAT` / `VITE_WEATHER_LON` | 任意 | 位置情報拒否時のフォールバック（例: 名古屋） |
 | `VITE_FITBIT_CLIENT_ID` | 任意 | Fitbit OAuth Client ID |
 | `VITE_FITBIT_REDIRECT_URI` | 任意 | 未設定時は起動 origin を使用 |
-| `VITE_JMA_OFFICE_CODE` / `VITE_JMA_AREA_CODE` | 任意 | 気象庁注意報の地域 |
+| `VITE_JMA_OFFICE_CODE` / `VITE_JMA_AREA_CODE` | 任意 | 気象庁の上書き（通常は自動推定で十分） |
 
 Fitbit 未設定・未連携時はデモデータで動作します。
 
@@ -88,7 +102,7 @@ Fitbit 未設定・未連携時はデモデータで動作します。
 src/
 ├── components/     # UI（TimerCircle, WeatherBadge, SleepSummary 等）
 ├── hooks/          # useHealthData, usePomodoroTimer
-├── lib/            # 健康判定・ストレージ・通知
+├── lib/            # 健康判定・位置情報・ストレージ・通知
 ├── services/
 │   ├── fitbit/     # Fitbit API + モック
 │   ├── jma/        # 気象庁注意報
