@@ -1,4 +1,4 @@
-export const JMA_WARNING_LABELS: Record<string, string> = {
+const JMA_WARNING_LABELS: Record<string, string> = {
   '02': '暴風雪特別警報',
   '03': '暴風雪警報',
   '04': '暴風雪注意報',

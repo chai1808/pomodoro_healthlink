@@ -41,9 +41,9 @@ export const SleepSummary = ({
         <h2 className="text-xs tracking-widest text-mono-muted uppercase">
           Sleep
         </h2>
-        <p className="text-sm">
+        <p className="text-sm text-mono-muted">
           平均{' '}
-          <span className="font-mono text-base">{avgSleepHours.toFixed(1)}</span>
+          <span className="font-mono text-mono-text">{avgSleepHours.toFixed(1)}</span>
           <span className="text-mono-muted"> h</span>
         </p>
       </div>
@@ -54,10 +54,8 @@ export const SleepSummary = ({
             key={record.date}
             className="grid grid-cols-[auto_1fr_auto] gap-x-3 gap-y-0.5 border-t border-mono-border/50 pt-2 text-xs first:border-t-0 first:pt-0"
           >
-            <span className="text-mono-text">{record.date}</span>
-            <span className="text-mono-muted">
-              {record.sleepStart} → {record.wakeTime}
-            </span>
+            <span className="font-mono text-mono-text">{record.date}</span>
+            <span className="text-mono-muted">{record.sleepStart} → {record.wakeTime}</span>
             <span className="font-mono text-right text-mono-text">
               {formatDuration(record.minutesAsleep)}
             </span>

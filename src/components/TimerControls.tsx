@@ -3,7 +3,6 @@ import type { SessionState } from '../types'
 type TimerControlsProps = {
   sessionState: SessionState
   isLimitReached: boolean
-  disabled: boolean
   onStart: () => void
   onPause: () => void
   onResume: () => void
@@ -13,7 +12,6 @@ type TimerControlsProps = {
 export const TimerControls = ({
   sessionState,
   isLimitReached,
-  disabled,
   onStart,
   onPause,
   onResume,
@@ -29,8 +27,6 @@ export const TimerControls = ({
       </p>
     )
   }
-
-  if (disabled) return null
 
   return (
     <div className="flex items-center justify-center gap-3">

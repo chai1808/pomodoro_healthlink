@@ -25,9 +25,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   const [isLimitReached, setIsLimitReached] = useState(
     () => isSessionLimitReached(config.maxSessionsPerDay),
   )
-  const [completedSessions, setCompletedSessions] = useState(
-    () => loadDailyUsage().completedSessions,
-  )
 
   const endAtRef = useRef<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -88,7 +85,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       setPhase('work')
       setCycle(1)
       setSessionState('completed')
-      setCompletedSessions(usage.completedSessions)
       setIsLimitReached(usage.completedSessions >= config.maxSessionsPerDay)
       setRemainingSeconds(workSeconds)
       return
@@ -140,7 +136,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     setCycle(1)
     setRemainingSeconds(workSeconds)
     setIsLimitReached(isSessionLimitReached(config.maxSessionsPerDay))
-    setCompletedSessions(loadDailyUsage().completedSessions)
   }, [
     config.mode,
     workSeconds,
@@ -177,7 +172,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     setRemainingSeconds(workSeconds)
     setSessionState('idle')
     setIsLimitReached(isSessionLimitReached(config.maxSessionsPerDay))
-    setCompletedSessions(loadDailyUsage().completedSessions)
   }, [clearTimer, config.maxSessionsPerDay, workSeconds])
 
   const totalSeconds = getPhaseSeconds(phase)
@@ -188,11 +182,9 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     phase,
     cycle,
     totalCycles: config.cycles,
-    remainingSeconds,
     displayTime: formatElapsed(remainingSeconds),
     sessionState,
     isLimitReached,
-    completedSessions,
     progress,
     handleStart,
     handlePause,

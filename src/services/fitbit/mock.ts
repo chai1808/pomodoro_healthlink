@@ -40,5 +40,3 @@ export const MOCK_ACTIVITY: ActivityData = {
     { date: formatDate(0), steps: 8800 },
   ],
 }
-
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'

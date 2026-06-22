@@ -14,7 +14,6 @@ export type SleepRecord = {
 }
 
 export type PressurePoint = {
-  time: string
   pressure: number
   timestamp: number
 }
@@ -27,10 +26,7 @@ export type WeatherInfo = {
   pressureRange: number
   maxDrop: number
   pressureWave3Days: PressurePoint[]
-  pressureCurrentIndex: number
   pressureDayBoundaries: number[]
-  isMockData?: boolean
-  mockReason?: string
   jmaHeadline?: string
   jmaTodayWarnings?: string[]
   jmaForecastDayWarnings?: Array<{ date: string; warnings: string[] }>
@@ -49,7 +45,6 @@ export type ActivityData = {
 
 export type HealthSnapshot = {
   avgSleepHours: number
-  activityScore: number
   status: HealthStatus
   pomodoroMode: PomodoroMode
   sleepRecords: SleepRecord[]

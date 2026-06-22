@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { buildHealthSnapshot } from '../lib/healthJudgment'
 import {
   fetchFitbitData,
-  getStoredToken,
   handleFitbitCallback,
   isFitbitConfigured,
 } from '../services/fitbit/api'
@@ -12,9 +11,7 @@ import type { HealthSnapshot } from '../types'
 type HealthDataState = {
   snapshot: HealthSnapshot | null
   loading: boolean
-  refreshing: boolean
   error: string | null
-  isMock: boolean
   fitbitConfigured: boolean
 }
 
@@ -22,28 +19,19 @@ export const useHealthData = () => {
   const [state, setState] = useState<HealthDataState>({
     snapshot: null,
     loading: true,
-    refreshing: false,
     error: null,
-    isMock: true,
     fitbitConfigured: isFitbitConfigured(),
   })
 
   const loadData = useCallback(async () => {
-    setState((prev) => {
-      const silent = prev.snapshot !== null
-      return {
-        ...prev,
-        loading: silent ? false : true,
-        refreshing: silent,
-        error: null,
-      }
-    })
+    setState((prev) => ({
+      ...prev,
+      loading: prev.snapshot === null,
+      error: null,
+    }))
 
     try {
       await handleFitbitCallback()
-
-      const token = getStoredToken()
-      const fitbitConfigured = isFitbitConfigured()
 
       const [fitbit, weather] = await Promise.all([
         fetchFitbitData(),
@@ -59,10 +47,8 @@ export const useHealthData = () => {
       setState({
         snapshot,
         loading: false,
-        refreshing: false,
         error: null,
-        isMock: !token,
-        fitbitConfigured,
+        fitbitConfigured: isFitbitConfigured(),
       })
     } catch (err) {
       const message =
@@ -71,7 +57,6 @@ export const useHealthData = () => {
       setState((prev) => ({
         ...prev,
         loading: false,
-        refreshing: false,
         error: prev.snapshot ? null : message,
       }))
     }

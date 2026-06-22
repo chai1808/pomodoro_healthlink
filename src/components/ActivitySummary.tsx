@@ -3,21 +3,19 @@ import type { ActivityData } from '../types'
 
 type ActivitySummaryProps = {
   activity: ActivityData
-  activityScore: number
   fitbitConfigured: boolean
 }
 
-const BAR_MAX_HEIGHT = 56
+const DISPLAY_DAYS = 6
 
-const formatShortDate = (dateStr: string): string => {
-  const [, month, day] = dateStr.split('-')
-  if (!month || !day) return dateStr
-  return `${parseInt(month, 10)}/${parseInt(day, 10)}`
+const calcAvgSteps = (steps: ActivityData['dailySteps']): number => {
+  if (steps.length === 0) return 0
+  const total = steps.reduce((sum, day) => sum + day.steps, 0)
+  return Math.round(total / steps.length)
 }
 
 export const ActivitySummary = ({
   activity,
-  activityScore,
   fitbitConfigured,
 }: ActivitySummaryProps) => {
   if (!fitbitConfigured) {
@@ -34,8 +32,8 @@ export const ActivitySummary = ({
     )
   }
 
-  const steps = activity.dailySteps
-  const maxSteps = Math.max(...steps.map((d) => d.steps), 1)
+  const steps = activity.dailySteps.slice(-DISPLAY_DAYS)
+  const avgSteps = calcAvgSteps(steps)
 
   return (
     <section
@@ -47,10 +45,11 @@ export const ActivitySummary = ({
           Activity
         </h2>
         <p className="text-sm text-mono-muted">
-          スコア{' '}
+          平均{' '}
           <span className="font-mono text-mono-text">
-            {(activityScore * 100).toFixed(0)}%
+            {avgSteps.toLocaleString()}
           </span>
+          <span className="text-mono-muted"> 歩</span>
         </p>
       </div>
 
@@ -59,34 +58,21 @@ export const ActivitySummary = ({
           歩数データがありません
         </p>
       ) : (
-        <div
-          className="flex items-end gap-1"
-          style={{ height: `${BAR_MAX_HEIGHT + 16}px` }}
-          role="img"
-          aria-label="直近7日間の歩数"
-        >
-          {steps.map((day) => {
-            const barHeight = Math.max(
-              (day.steps / maxSteps) * BAR_MAX_HEIGHT,
-              4,
-            )
-            return (
-              <div
-                key={day.date}
-                className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
-              >
-                <div
-                  className="w-full rounded-t bg-mono-border"
-                  style={{ height: `${barHeight}px` }}
-                  title={`${day.date}: ${day.steps.toLocaleString()} 歩`}
-                />
-                <span className="text-[9px] text-mono-muted">
-                  {formatShortDate(day.date)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-9">
+          {steps.map((day, index) => (
+            <li
+              key={day.date}
+              className={`flex items-baseline justify-between py-2 text-xs ${
+                index > 0 ? 'border-t border-mono-border/50' : ''
+              } ${index >= 2 ? 'sm:border-t' : 'sm:border-t-0'}`}
+            >
+              <span className="font-mono text-mono-text">{day.date}</span>
+              <span className="font-mono text-mono-text">
+                {day.steps.toLocaleString()} 歩
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   )

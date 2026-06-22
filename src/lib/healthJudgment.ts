@@ -16,34 +16,7 @@ import type {
   WeatherInfo,
 } from '../types'
 
-export const calcAvgSleepHours = (records: SleepRecord[]): number => {
-  const recent = records.slice(0, 3)
-  if (recent.length === 0) return 0
-
-  const totalHours = recent.reduce(
-    (sum, record) => sum + record.minutesAsleep / 60,
-    0,
-  )
-  return totalHours / recent.length
-}
-
-export const calcActivityScore = (activity: ActivityData): number => {
-  const { currentWeekSteps, last4WeeksSteps } = activity
-
-  if (currentWeekSteps.length === 0 || last4WeeksSteps.length === 0) {
-    return 1
-  }
-
-  const currentWeekAverage =
-    currentWeekSteps.reduce((a, b) => a + b, 0) / currentWeekSteps.length
-
-  const baselineAverage =
-    last4WeeksSteps.reduce((a, b) => a + b, 0) / last4WeeksSteps.length
-
-  if (baselineAverage === 0) return 1
-
-  return Math.round((currentWeekAverage / baselineAverage) * 100) / 100
-}
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 
 const startOfDay = (date: Date = new Date()): Date => {
   const d = new Date(date)
@@ -51,7 +24,7 @@ const startOfDay = (date: Date = new Date()): Date => {
   return d
 }
 
-export const filterPointsForDay = (
+const filterPointsForDay = (
   points: PressurePoint[],
   dayOffset: number,
 ): PressurePoint[] => {
@@ -68,7 +41,7 @@ export const filterPointsForDay = (
     .sort((a, b) => a.timestamp - b.timestamp)
 }
 
-export const filterPointsForDayRange = (
+const filterPointsForDayRange = (
   points: PressurePoint[],
   startDayOffset: number,
   dayCount: number,
@@ -86,9 +59,7 @@ export const filterPointsForDayRange = (
     .sort((a, b) => a.timestamp - b.timestamp)
 }
 
-const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-
-export const calcMaxDropInWindow = (
+const calcMaxDropInWindow = (
   points: PressurePoint[],
   windowMs: number,
 ): number => {
@@ -107,22 +78,13 @@ export const calcMaxDropInWindow = (
   return maxDrop
 }
 
-export const calcPressureMetrics = (points: PressurePoint[]) => {
-  if (points.length < 2) {
-    return { pressureRange: 0, maxDrop: 0 }
-  }
+export const calcTodayPressureRange = (points: PressurePoint[]): number => {
+  const dayPoints = filterPointsForDay(points, 0)
+  if (dayPoints.length < 2) return 0
 
-  const pressures = points.map((p) => p.pressure)
-  const pressureRange = Math.max(...pressures) - Math.min(...pressures)
-
-  const drops = pressures.slice(0, -1).map((p, i) => p - pressures[i + 1])
-  const maxDrop = Math.max(...drops, 0)
-
-  return { pressureRange, maxDrop }
+  const pressures = dayPoints.map((p) => p.pressure)
+  return Math.max(...pressures) - Math.min(...pressures)
 }
-
-export const calcTodayPressureRange = (points: PressurePoint[]): number =>
-  calcPressureMetrics(filterPointsForDay(points, 0)).pressureRange
 
 export const calcForecastMaxDrop = (
   points: PressurePoint[],
@@ -182,7 +144,36 @@ export const getForecastMaxDropText = (
   return `急降下なし（${value}）`
 }
 
-export const evaluateHealthStatus = (
+const calcAvgSleepHours = (records: SleepRecord[]): number => {
+  const recent = records.slice(0, 3)
+  if (recent.length === 0) return 0
+
+  const totalHours = recent.reduce(
+    (sum, record) => sum + record.minutesAsleep / 60,
+    0,
+  )
+  return totalHours / recent.length
+}
+
+const calcActivityScore = (activity: ActivityData): number => {
+  const { currentWeekSteps, last4WeeksSteps } = activity
+
+  if (currentWeekSteps.length === 0 || last4WeeksSteps.length === 0) {
+    return 1
+  }
+
+  const currentWeekAverage =
+    currentWeekSteps.reduce((a, b) => a + b, 0) / currentWeekSteps.length
+
+  const baselineAverage =
+    last4WeeksSteps.reduce((a, b) => a + b, 0) / last4WeeksSteps.length
+
+  if (baselineAverage === 0) return 1
+
+  return Math.round((currentWeekAverage / baselineAverage) * 100) / 100
+}
+
+const evaluateHealthStatus = (
   avgSleepHours: number,
   activityScore: number,
 ): HealthStatus => {
@@ -195,7 +186,7 @@ export const evaluateHealthStatus = (
   return 'activity_day'
 }
 
-export const selectPomodoroMode = (
+const selectPomodoroMode = (
   todayPressureRange: number,
   forecastMaxDrop: number,
   jmaTodayWarnings: string[] = [],
@@ -239,22 +230,10 @@ export const buildHealthSnapshot = (
 
   return {
     avgSleepHours,
-    activityScore,
     status,
     pomodoroMode,
     sleepRecords,
     weather,
     activity,
-  }
-}
-
-export const getStatusMessage = (status: HealthStatus): string => {
-  switch (status) {
-    case 'sleep_day':
-      return '睡眠日'
-    case 'activity_day':
-      return '運動日'
-    default:
-      return ''
   }
 }

@@ -1,4 +1,3 @@
-import { getWeatherIconUrl } from '../services/weather/api'
 import {
   getForecastMaxDropText,
   getTodayPressureRangeText,
@@ -83,86 +82,80 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
           {weather.jmaHeadline}
         </p>
       )}
-      {weather.isMockData && (
-        <p
-          className="mb-3 rounded border border-dashed border-mono-border px-3 py-2 text-center text-[10px] text-mono-muted"
-          role="status"
-        >
-          デモ表示 — {weather.mockReason ?? 'APIキーを確認してください'}
-        </p>
-      )}
-      <div className="flex items-center gap-3">
-        <img
-          src={getWeatherIconUrl(weather.icon)}
-          alt=""
-          className="h-10 w-10"
-          loading="lazy"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm capitalize">{weather.description}</p>
-          <p className="text-xs text-mono-muted">
-            {weather.temp}°C · 湿度 {weather.humidity}%
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="shrink-0 text-3xl leading-none" aria-hidden="true">
+            {weather.icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm">{weather.description}</p>
+            <p className="text-xs text-mono-muted">
+              {weather.temp}°C · 湿度 {weather.humidity}%
+            </p>
+          </div>
         </div>
-        <div className="text-right text-xs text-mono-muted">
+        <div className="flex flex-col gap-1 text-xs text-mono-muted sm:ml-auto sm:shrink-0 sm:text-right">
           <p>当日：{todayPressureText}</p>
           <p>先2日：{forecastDropText}</p>
         </div>
       </div>
 
-      <div>
-        <svg
-          viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-          className="w-full"
-          role="img"
-          aria-label="当日と先2日間の気圧変動"
-        >
-          {weather.pressureDayBoundaries.map((boundaryIndex) => {
-            const x = getPointX(boundaryIndex, points.length)
-            return (
-              <line
-                key={boundaryIndex}
-                x1={x}
-                y1={PAD_Y}
-                x2={x}
-                y2={CHART_HEIGHT}
-                stroke="#2f2f2f"
-                strokeWidth="0.5"
-                strokeDasharray="1 2"
-              />
-            )
-          })}
+      <div className="mt-3 w-full overflow-x-auto md:overflow-visible">
+        <div className="min-w-[480px] md:min-w-0">
+          <svg
+            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+            className="w-full"
+            role="img"
+            aria-label="当日と先2日間の気圧変動"
+          >
+            {weather.pressureDayBoundaries.map((boundaryIndex) => {
+              const x = getPointX(boundaryIndex, points.length)
+              return (
+                <line
+                  key={boundaryIndex}
+                  x1={x}
+                  y1={PAD_Y}
+                  x2={x}
+                  y2={CHART_HEIGHT}
+                  stroke="#2f2f2f"
+                  strokeWidth="0.5"
+                  strokeDasharray="1 2"
+                />
+              )
+            })}
 
-          <path
-            d={linePath}
-            fill="none"
-            stroke="#888888"
-            strokeWidth="0.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </svg>
+            <path
+              d={linePath}
+              fill="none"
+              stroke="#888888"
+              strokeWidth="0.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
 
-        <div className="relative mt-1 flex text-[9px] text-mono-muted">
-          {daySegments.map((segment) => {
-            const left =
-              (segment.start / Math.max(points.length - 1, 1)) * 100
-            const width =
-              ((segment.end - segment.start) / Math.max(points.length - 1, 1)) *
-              100
-            return (
-              <span
-                key={`${segment.start}-${segment.end}`}
-                className="absolute truncate text-center"
-                style={{
-                  left: `${left}%`,
-                  width: `${width}%`,
-                }}
-              >
-                {segment.label}
-              </span>
-            )
-          })}
+          <div className="relative mt-1 h-3 text-[9px] text-mono-muted">
+            {daySegments.map((segment) => {
+              const left =
+                (segment.start / Math.max(points.length - 1, 1)) * 100
+              const width =
+                ((segment.end - segment.start) /
+                  Math.max(points.length - 1, 1)) *
+                100
+              return (
+                <span
+                  key={`${segment.start}-${segment.end}`}
+                  className="absolute truncate text-center"
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                  }}
+                >
+                  {segment.label}
+                </span>
+              )
+            })}
+          </div>
         </div>
       </div>
     </section>

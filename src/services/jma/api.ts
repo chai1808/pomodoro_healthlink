@@ -41,8 +41,6 @@ export type JmaWarningState = {
   headline: string
   todayWarnings: string[]
   forecastDayWarnings: Array<{ date: string; warnings: string[] }>
-  hasTodayWarning: boolean
-  hasForecastWarning: boolean
 }
 
 const ACTIVE_STATUSES = new Set(['発表', '継続', '切替'])
@@ -229,8 +227,6 @@ export const fetchJmaWarnings = async (): Promise<JmaWarningState> => {
     headline: '',
     todayWarnings: [],
     forecastDayWarnings: [],
-    hasTodayWarning: false,
-    hasForecastWarning: false,
   }
 
   try {
@@ -260,10 +256,6 @@ export const fetchJmaWarnings = async (): Promise<JmaWarningState> => {
       headline: report?.headlineText ?? '',
       todayWarnings,
       forecastDayWarnings,
-      hasTodayWarning: todayWarnings.length > 0,
-      hasForecastWarning: forecastDayWarnings.some(
-        (day) => day.warnings.length > 0,
-      ),
     }
   } catch {
     return empty

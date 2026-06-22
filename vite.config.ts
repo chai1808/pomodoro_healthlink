@@ -4,6 +4,15 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api/fitbit/token': {
+        target: 'https://api.fitbit.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/fitbit\/token/, '/oauth2/token'),
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

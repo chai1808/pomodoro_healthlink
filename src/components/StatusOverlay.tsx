@@ -1,4 +1,3 @@
-import { getStatusMessage } from '../lib/healthJudgment'
 import type { HealthStatus } from '../types'
 
 type StatusOverlayProps = {
@@ -6,10 +5,24 @@ type StatusOverlayProps = {
   visible: boolean
 }
 
+const STATUS_COPY: Record<
+  Exclude<HealthStatus, 'healthy'>,
+  { title: string; subtitle: string }
+> = {
+  sleep_day: {
+    title: '睡眠日',
+    subtitle: '平均睡眠7時間未満のため、本日は休息を優先してください',
+  },
+  activity_day: {
+    title: '運動日',
+    subtitle: '活動量が基準未満のため、本日は運動を優先してください',
+  },
+}
+
 export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
   if (!visible || status === 'healthy') return null
 
-  const message = getStatusMessage(status)
+  const copy = STATUS_COPY[status]
 
   return (
     <div
@@ -19,13 +32,9 @@ export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
     >
       <div className="text-center">
         <p className="text-3xl font-light tracking-widest text-mono-muted sm:text-4xl">
-          {message}
+          {copy.title}
         </p>
-        <p className="mt-4 text-sm text-mono-muted/70">
-          {status === 'sleep_day'
-            ? '平均睡眠7時間未満のため、本日は休息を優先してください'
-            : '活動量が基準未満のため、本日は運動を優先してください'}
-        </p>
+        <p className="mt-4 text-sm text-mono-muted/70">{copy.subtitle}</p>
       </div>
     </div>
   )

@@ -13,7 +13,6 @@ import type { HealthSnapshot } from './types'
 
 type AppContentProps = {
   snapshot: HealthSnapshot
-  refreshing: boolean
   showDetails: boolean
   onToggleDetails: () => void
   onCloseDetails: () => void
@@ -22,7 +21,6 @@ type AppContentProps = {
 
 const AppContent = ({
   snapshot,
-  refreshing,
   showDetails,
   onToggleDetails,
   onCloseDetails,
@@ -48,9 +46,6 @@ const AppContent = ({
         <h1 className="text-xs tracking-[0.3em] text-mono-muted uppercase">
           Pomodoro Healthlink
         </h1>
-        {refreshing && (
-          <span className="text-[10px] text-mono-muted">更新中…</span>
-        )}
       </header>
 
       <main className="relative flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-24 sm:gap-8">
@@ -79,7 +74,6 @@ const AppContent = ({
             <TimerControls
               sessionState={timer.sessionState}
               isLimitReached={timer.isLimitReached}
-              disabled={!isHealthy}
               onStart={timer.handleStart}
               onPause={timer.handlePause}
               onResume={timer.handleResume}
@@ -108,7 +102,7 @@ const AppContent = ({
             onClick={onCloseDetails}
           />
           <aside
-            className="details-sheet fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-mono-border bg-mono-bg px-4 pt-4 pb-8 sm:px-6"
+            className="overflow-hidden details-sheet fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-mono-border bg-mono-bg px-4 pt-4 pb-8 sm:px-6"
             aria-label="詳細データ"
           >
             <div className="space-y-3">
@@ -120,7 +114,6 @@ const AppContent = ({
               />
               <ActivitySummary
                 activity={snapshot.activity}
-                activityScore={snapshot.activityScore}
                 fitbitConfigured={fitbitConfigured}
               />
             </div>
@@ -131,12 +124,11 @@ const AppContent = ({
   )
 }
 
-export const App = () => {
+export default function App() {
   const [showDetails, setShowDetails] = useState(false)
   const {
     snapshot,
     loading,
-    refreshing,
     error,
     refresh,
     fitbitConfigured,
@@ -173,7 +165,6 @@ export const App = () => {
     <AppContent
       key={snapshot.pomodoroMode}
       snapshot={snapshot}
-      refreshing={refreshing}
       showDetails={showDetails}
       onToggleDetails={() => setShowDetails((prev) => !prev)}
       onCloseDetails={() => setShowDetails(false)}
@@ -182,4 +173,3 @@ export const App = () => {
   )
 }
 
-export default App
