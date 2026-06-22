@@ -57,7 +57,7 @@ export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
         <p className="text-3xl font-light tracking-widest text-mono-muted font-bold sm:text-4xl">
           {copy.title}
         </p>
-        <p className="mt-4 text-sm text-mono-muted/70 sm:text-right">{copy.subtitle}</p>
+        <p className="mt-4 text-sm text-mono-muted/70">{copy.subtitle}</p>
       </div>
     </div>
   )
