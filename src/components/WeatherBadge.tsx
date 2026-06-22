@@ -184,7 +184,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
                   x2={nowX}
                   y2={CHART_HEIGHT}
                   stroke="#2f2f2f"
-                  strokeWidth="0.5"
+                  strokeWidth="1"
                   strokeDasharray="1 2"
                 />
               </>
