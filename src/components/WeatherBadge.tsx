@@ -87,7 +87,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
           {weather.locationLabel && (
             <span>
               位置: {weather.locationLabel}
-              {weather.locationSource === 'default' && '（デフォルト）'}
+              {weather.locationSource === 'default'}
             </span>
           )}
           {weather.jmaAreaName && (
