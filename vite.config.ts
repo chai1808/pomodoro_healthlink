@@ -6,10 +6,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   server: {
     proxy: {
-      '/api/fitbit/token': {
-        target: 'https://api.fitbit.com',
+      '/api/google/token': {
+        target: 'https://oauth2.googleapis.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/fitbit\/token/, '/oauth2/token'),
+        rewrite: (path) => path.replace(/^\/api\/google\/token/, '/token'),
       },
     },
   },

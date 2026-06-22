@@ -26,6 +26,8 @@ export const POMODORO_CONFIGS = {
 } as const
 
 export const STORAGE_KEYS = {
+  googleHealthAccessToken: 'healthlink_google_health_access_token',
+  googleHealthRefreshToken: 'healthlink_google_health_refresh_token',
   fitbitToken: 'healthlink_fitbit_token',
   dailyUsage: 'healthlink_daily_usage',
   pkceVerifier: 'healthlink_pkce_verifier',

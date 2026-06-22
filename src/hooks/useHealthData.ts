@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { buildHealthSnapshot } from '../lib/healthJudgment'
 import { resolveUserLocation } from '../lib/location'
 import {
+  disconnectFitbit,
   fetchFitbitData,
   handleFitbitCallback,
+  isFitbitAuthenticated,
   isFitbitConfigured,
 } from '../services/fitbit/api'
 import { fetchWeather } from '../services/weather/api'
@@ -14,6 +16,7 @@ type HealthDataState = {
   loading: boolean
   error: string | null
   fitbitConfigured: boolean
+  fitbitConnected: boolean
 }
 
 export const useHealthData = () => {
@@ -22,6 +25,7 @@ export const useHealthData = () => {
     loading: true,
     error: null,
     fitbitConfigured: isFitbitConfigured(),
+    fitbitConnected: isFitbitAuthenticated(),
   })
 
   const loadData = useCallback(async () => {
@@ -52,6 +56,7 @@ export const useHealthData = () => {
         loading: false,
         error: null,
         fitbitConfigured: isFitbitConfigured(),
+        fitbitConnected: isFitbitAuthenticated(),
       })
     } catch (err) {
       const message =
@@ -69,5 +74,10 @@ export const useHealthData = () => {
     loadData()
   }, [loadData])
 
-  return { ...state, refresh: loadData }
+  const handleDisconnectFitbit = useCallback(() => {
+    disconnectFitbit()
+    void loadData()
+  }, [loadData])
+
+  return { ...state, refresh: loadData, disconnectFitbit: handleDisconnectFitbit }
 }

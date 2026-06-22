@@ -5,6 +5,7 @@ import { StatusOverlay } from './components/StatusOverlay'
 import { WeatherBadge } from './components/WeatherBadge'
 import { SleepSummary } from './components/SleepSummary'
 import { ActivitySummary } from './components/ActivitySummary'
+import { FitbitConnectButton } from './components/FitbitConnectButton'
 import { useHealthData } from './hooks/useHealthData'
 import { usePomodoroTimer } from './hooks/usePomodoroTimer'
 import { getPomodoroConfig } from './lib/healthJudgment'
@@ -17,6 +18,8 @@ type AppContentProps = {
   onToggleDetails: () => void
   onCloseDetails: () => void
   fitbitConfigured: boolean
+  fitbitConnected: boolean
+  onDisconnectFitbit: () => void
 }
 
 const AppContent = ({
@@ -25,6 +28,8 @@ const AppContent = ({
   onToggleDetails,
   onCloseDetails,
   fitbitConfigured,
+  fitbitConnected,
+  onDisconnectFitbit,
 }: AppContentProps) => {
   const config = getPomodoroConfig(snapshot.pomodoroMode)
   const isHealthy = snapshot.status === 'healthy'
@@ -83,42 +88,56 @@ const AppContent = ({
         )}
       </main>
 
-      <button
-        type="button"
-        onClick={onToggleDetails}
-        className="fixed right-5 bottom-6 z-30 duration-200 cursor-pointer rounded-full border border-mono-border bg-mono-surface px-4 py-2.5 text-xs text-mono-text shadow-lg hover:border-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
-        aria-expanded={showDetails}
-        aria-label={showDetails ? '詳細を閉じる' : '詳細データを表示'}
-      >
-        {showDetails ? '閉じる' : '詳細'}
-      </button>
-
-      {showDetails && (
+      {fitbitConnected ? (
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/50 duration-300"
-            aria-label="詳細を閉じる"
-            onClick={onCloseDetails}
-          />
-          <aside
-            className="overflow-hidden details-sheet fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-mono-border bg-mono-bg px-4 pt-4 pb-8 sm:px-6"
-            aria-label="詳細データ"
+            onClick={onToggleDetails}
+            className="fixed right-5 bottom-6 z-30 duration-200 cursor-pointer rounded-full border border-mono-border bg-mono-surface px-4 py-2.5 text-xs text-mono-text shadow-lg hover:border-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
+            aria-expanded={showDetails}
+            aria-label={showDetails ? '詳細を閉じる' : '詳細データを表示'}
           >
-            <div className="space-y-3">
-              <WeatherBadge weather={snapshot.weather} />
-              <SleepSummary
-                records={snapshot.sleepRecords}
-                avgSleepHours={snapshot.avgSleepHours}
-                fitbitConfigured={fitbitConfigured}
+            {showDetails ? '閉じる' : '詳細'}
+          </button>
+
+          {showDetails && (
+            <>
+              <button
+                type="button"
+                className="fixed inset-0 z-40 bg-black/50 duration-300"
+                aria-label="詳細を閉じる"
+                onClick={onCloseDetails}
               />
-              <ActivitySummary
-                activity={snapshot.activity}
-                fitbitConfigured={fitbitConfigured}
-              />
-            </div>
-          </aside>
+              <aside
+                className="overflow-hidden details-sheet fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-mono-border bg-mono-bg px-4 pt-4 pb-8 sm:px-6"
+                aria-label="詳細データ"
+              >
+                <div className="space-y-3">
+                  <WeatherBadge weather={snapshot.weather} />
+                  <SleepSummary
+                    records={snapshot.sleepRecords}
+                    avgSleepHours={snapshot.avgSleepHours}
+                    fitbitConfigured={fitbitConfigured}
+                  />
+                  <ActivitySummary
+                    activity={snapshot.activity}
+                    fitbitConfigured={fitbitConfigured}
+                  />
+                  <button
+                    type="button"
+                    onClick={onDisconnectFitbit}
+                    className="w-full duration-200 cursor-pointer rounded-full border border-mono-border/50 py-2.5 text-xs text-mono-muted transition-colors hover:border-mono-border hover:text-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
+                    aria-label="Fitbit 連携を解除"
+                  >
+                    Fitbit 連携を解除
+                  </button>
+                </div>
+              </aside>
+            </>
+          )}
         </>
+      ) : (
+        <FitbitConnectButton />
       )}
     </div>
   )
@@ -132,6 +151,8 @@ export default function App() {
     error,
     refresh,
     fitbitConfigured,
+    fitbitConnected,
+    disconnectFitbit,
   } = useHealthData()
 
   useEffect(() => {
@@ -161,6 +182,11 @@ export default function App() {
     )
   }
 
+  const handleDisconnectFitbit = () => {
+    setShowDetails(false)
+    disconnectFitbit()
+  }
+
   return (
     <AppContent
       key={snapshot.pomodoroMode}
@@ -169,6 +195,8 @@ export default function App() {
       onToggleDetails={() => setShowDetails((prev) => !prev)}
       onCloseDetails={() => setShowDetails(false)}
       fitbitConfigured={fitbitConfigured}
+      fitbitConnected={fitbitConnected}
+      onDisconnectFitbit={handleDisconnectFitbit}
     />
   )
 }
