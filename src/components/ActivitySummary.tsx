@@ -1,4 +1,5 @@
 import type { ActivityData } from '../types'
+import { isoDate } from '../services/googleHealth/format'
 
 type ActivitySummaryProps = {
   activity: ActivityData
@@ -24,8 +25,11 @@ export const ActivitySummary = ({
 }: ActivitySummaryProps) => {
   if (!healthConfigured || !healthConnected) return null
 
+  const today = isoDate(new Date())
+
   const steps = [...activity.dailySteps]
     .filter(isValidStepDay)
+    .filter((day) => day.date <= today)
     .sort((left, right) => right.date.localeCompare(left.date))
     .slice(0, DISPLAY_DAYS)
 

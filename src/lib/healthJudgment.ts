@@ -134,18 +134,32 @@ const isoDate = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+const addDays = (date: Date, days: number): Date => {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
 const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
-  const sorted = activity.dailySteps
-    .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.date))
-    .sort((left, right) => left.date.localeCompare(right.date))
+  const stepByDate = new Map<string, number>()
 
-  const today = isoDate(new Date())
-  const completedDays = sorted.filter((day) => day.date < today)
+  for (const day of activity.dailySteps) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day.date)) continue
+    stepByDate.set(day.date, day.steps)
+  }
 
-  if (completedDays.length < 7) return null
+  const today = startOfDay()
+  const yesterdayKey = isoDate(addDays(today, -1))
+  const yesterdaySteps = stepByDate.get(yesterdayKey)
+  if (yesterdaySteps === undefined) return null
 
-  const yesterday = completedDays[completedDays.length - 1]
-  const past6Days = completedDays.slice(-7, -1)
+  const past6Days: Array<{ date: string; steps: number }> = []
+  for (let offset = 2; offset <= 7; offset += 1) {
+    const key = isoDate(addDays(today, -offset))
+    const steps = stepByDate.get(key)
+    if (steps === undefined) return null
+    past6Days.push({ date: key, steps })
+  }
 
   if (past6Days.length < 6) return null
 
@@ -157,7 +171,7 @@ const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
 
   if (trimmedAverage === 0) return null
 
-  return Math.round((yesterday.steps / trimmedAverage) * 100) / 100
+  return Math.round((yesterdaySteps / trimmedAverage) * 100) / 100
 }
 
 const evaluateHealthStatus = (

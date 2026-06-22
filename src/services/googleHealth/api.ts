@@ -72,7 +72,7 @@ const buildActivityData = (dailySteps: DailySteps[]): ActivityData => ({
 
 const parseRollupPoint = (point: HealthStepsRollupPoint): DailySteps | null => {
   const date =
-    formatCivilDate(point.civilEndTime) || formatCivilDate(point.civilStartTime)
+    formatCivilDate(point.civilStartTime) || formatCivilDate(point.civilEndTime)
   if (!date) return null
 
   const steps = parseInt(point.steps?.countSum ?? '0', 10)
@@ -81,11 +81,15 @@ const parseRollupPoint = (point: HealthStepsRollupPoint): DailySteps | null => {
   return { date, steps }
 }
 
-const parseRollupSteps = (raw: HealthStepsRollupPoint[]): DailySteps[] =>
-  raw
+const parseRollupSteps = (raw: HealthStepsRollupPoint[]): DailySteps[] => {
+  const today = isoDate(new Date())
+
+  return raw
     .map(parseRollupPoint)
     .filter((day): day is DailySteps => day !== null)
+    .filter((day) => day.date <= today)
     .sort((left, right) => left.date.localeCompare(right.date))
+}
 
 const parseStepsListPoint = (
   item: HealthStepsPoint,
@@ -94,10 +98,10 @@ const parseStepsListPoint = (
   if (!interval) return null
 
   const date =
-    formatCivilDate(interval.civilEndTime) ||
     formatCivilDate(interval.civilStartTime) ||
-    isoDateFromTimestamp(interval.endTime) ||
-    isoDateFromTimestamp(interval.startTime)
+    formatCivilDate(interval.civilEndTime) ||
+    isoDateFromTimestamp(interval.startTime) ||
+    isoDateFromTimestamp(interval.endTime)
   if (!date) return null
 
   const steps = parseInt(item.steps?.count ?? item.steps?.countSum ?? '0', 10)
@@ -110,8 +114,10 @@ const aggregateStepsByDate = (
   points: Array<{ date: string; steps: number }>,
 ): DailySteps[] => {
   const totals = new Map<string, number>()
+  const today = isoDate(new Date())
 
   for (const point of points) {
+    if (point.date > today) continue
     totals.set(point.date, (totals.get(point.date) ?? 0) + point.steps)
   }
 
