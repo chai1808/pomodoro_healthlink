@@ -126,14 +126,24 @@ const AppContent = ({
                     healthConfigured={healthConfigured}
                     healthConnected={healthConnected}
                   />
-                  <button
-                    type="button"
-                    onClick={onDisconnect}
-                    className="w-full duration-200 cursor-pointer rounded-full border border-mono-border/50 py-2.5 text-xs text-mono-muted transition-colors hover:border-mono-border hover:text-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
-                    aria-label="Fitbit 連携を解除"
-                  >
-                    Fitbit 連携を解除
-                  </button>
+                  <div className="flex gap-2 sm:block">
+                    <button
+                      type="button"
+                      onClick={onDisconnect}
+                      className="flex-1 duration-200 cursor-pointer rounded-full border border-mono-border/50 py-2.5 text-xs text-mono-muted transition-colors hover:border-mono-border hover:text-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text sm:w-full"
+                      aria-label="Fitbit 連携を解除"
+                    >
+                      Fitbit 連携を解除
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onCloseDetails}
+                      className="flex-1 duration-200 cursor-pointer rounded-full border border-mono-border bg-mono-surface py-2.5 text-xs text-mono-text transition-colors hover:border-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text sm:hidden"
+                      aria-label="詳細を閉じる"
+                    >
+                      閉じる
+                    </button>
+                  </div>
                 </div>
                 </div>
               </aside>
