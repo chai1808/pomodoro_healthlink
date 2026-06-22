@@ -127,22 +127,34 @@ const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
   return totalHours / recent.length
 }
 
-const calcWeeklyVsMonthlyStepRatio = (activity: ActivityData): number | null => {
-  const { currentWeekSteps, last4WeeksSteps } = activity
+const isoDate = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
-  if (currentWeekSteps.length === 0 || last4WeeksSteps.length === 0) {
-    return null
-  }
+const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
+  const sorted = activity.dailySteps
+    .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.date))
+    .sort((left, right) => left.date.localeCompare(right.date))
 
-  const weekAverage =
-    currentWeekSteps.reduce((sum, steps) => sum + steps, 0) / currentWeekSteps.length
+  const today = isoDate(new Date())
+  const completedDays = sorted.filter((day) => day.date < today)
 
-  const monthAverage =
-    last4WeeksSteps.reduce((sum, steps) => sum + steps, 0) / last4WeeksSteps.length
+  if (completedDays.length < 7) return null
 
-  if (monthAverage === 0) return null
+  const yesterday = completedDays[completedDays.length - 1]
+  const past6Days = completedDays.slice(-7, -1)
 
-  return Math.round((weekAverage / monthAverage) * 100) / 100
+  if (past6Days.length < 6) return null
+
+  const past6Average =
+    past6Days.reduce((sum, day) => sum + day.steps, 0) / past6Days.length
+
+  if (past6Average === 0) return null
+
+  return Math.round((yesterday.steps / past6Average) * 100) / 100
 }
 
 const evaluateHealthStatus = (
@@ -157,7 +169,7 @@ const evaluateHealthStatus = (
     return 'healthy'
   }
 
-  if (avgSleepHours < MIN_HEALTHY_SLEEP_HOURS) {
+  if (avgSleepHours <= MIN_HEALTHY_SLEEP_HOURS) {
     return 'sleep_day'
   }
 
@@ -191,7 +203,7 @@ export const buildHealthSnapshot = (
   weather: WeatherInfo,
 ): HealthSnapshot => {
   const avgSleepHours = calcAvgSleepHours(sleepRecords)
-  const stepRatio = calcWeeklyVsMonthlyStepRatio(activity)
+  const stepRatio = calcYesterdayStepRatio(activity)
   const status = evaluateHealthStatus(avgSleepHours, stepRatio)
 
   const pomodoroMode =

@@ -16,7 +16,7 @@ const STATUS_COPY: Record<
   activity_day: {
     title: '運動日',
     subtitle:
-      '今週の平均歩数が月の平均歩数の70%より下のため、本日は運動を優先してください',
+      '昨日の歩数が過去6日間の平均の70%より下のため、本日は運動を優先してください',
   },
   data_unavailable: {
     title: 'データ取得中',

@@ -24,7 +24,10 @@ export const ActivitySummary = ({
 }: ActivitySummaryProps) => {
   if (!healthConfigured || !healthConnected) return null
 
-  const steps = activity.dailySteps.filter(isValidStepDay).slice(-DISPLAY_DAYS)
+  const steps = [...activity.dailySteps]
+    .filter(isValidStepDay)
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, DISPLAY_DAYS)
 
   if (steps.length === 0) return null
 
@@ -48,13 +51,11 @@ export const ActivitySummary = ({
         </p>
       </div>
 
-      <ul className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-9">
-        {steps.map((day, index) => (
+      <ul className="divide-y divide-mono-border/50">
+        {steps.map((day) => (
           <li
             key={day.date}
-            className={`flex items-baseline justify-between py-2 text-xs ${
-              index > 0 ? 'border-t border-mono-border/50' : ''
-            } ${index >= 2 ? 'sm:border-t' : 'sm:border-t-0'}`}
+            className="flex items-baseline justify-between py-2 text-xs first:pt-0 last:pb-0"
           >
             <span className="font-mono text-mono-text">{day.date}</span>
             <span className="font-mono text-mono-text">
