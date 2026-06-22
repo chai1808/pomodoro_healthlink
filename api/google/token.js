@@ -1,3 +1,5 @@
+import { exchangeGoogleToken } from '../lib/exchangeGoogleToken.js'
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method_not_allowed' })
@@ -10,14 +12,8 @@ export default async function handler(req, res) {
       : new URLSearchParams(req.body ?? {}).toString()
 
   try {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    })
-
-    const text = await response.text()
-    res.status(response.status).setHeader('Content-Type', 'application/json').send(text)
+    const { status, text } = await exchangeGoogleToken(body, process.env.GOOGLE_CLIENT_SECRET)
+    res.status(status).setHeader('Content-Type', 'application/json').send(text)
   } catch (err) {
     res.status(500).json({
       error: 'proxy_failed',

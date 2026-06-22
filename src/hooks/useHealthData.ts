@@ -37,6 +37,9 @@ export const useHealthData = () => {
 
     try {
       const oauth = await handleOAuthCallback()
+      if (!oauth.ok) {
+        throw new Error(`Google 連携に失敗しました: ${oauth.message}`)
+      }
 
       const location = await resolveUserLocation()
       const [health, weather] = await Promise.all([
@@ -44,12 +47,10 @@ export const useHealthData = () => {
         fetchWeather(location),
       ])
 
-      const snapshot = buildHealthSnapshot(health.sleepRecords, health.activity, weather)
-
       setState({
-        snapshot,
+        snapshot: buildHealthSnapshot(health.sleepRecords, health.activity, weather),
         loading: false,
-        error: oauth.ok ? null : `Google 連携に失敗しました: ${oauth.message}`,
+        error: null,
         healthConfigured: isHealthConfigured(),
         healthConnected: isHealthConnected(),
       })
@@ -60,7 +61,7 @@ export const useHealthData = () => {
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: prev.snapshot ? null : message,
+        error: message,
       }))
     }
   }, [])

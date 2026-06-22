@@ -61,20 +61,22 @@ npm run dev
 |------|------|------|
 | `VITE_GOOGLE_CLIENT_ID` | 任意 | Google Cloud Console の OAuth クライアント ID |
 | `VITE_GOOGLE_REDIRECT_URI` | 任意 | OAuth コールバック URL（未設定時は `{origin}/`） |
+| `GOOGLE_CLIENT_SECRET` | 連携時必須 | OAuth クライアント シークレット（**サーバー側のみ**。VITE_ 不可） |
 
 **Google Cloud Console 設定**
 
 1. プロジェクト作成 → **Google Health API** を有効化
 2. OAuth 同意画面（外部）を設定
 3. OAuth クライアント ID（**ウェブアプリケーション**）を作成
-4. 承認済みリダイレクト URI に以下を追加  
+4. **クライアント シークレット**を控える → Vercel / ローカル `.env` に `GOOGLE_CLIENT_SECRET` として設定
+5. 承認済みリダイレクト URI に以下を追加  
    - 本番: `https://pomodoro-healthlink.vercel.app/auth/google/callback`  
    - 開発: `http://localhost:5173/auth/google/callback`
 
 **Vercel 公開時**
 
-- Vercel の Environment Variables に `VITE_GOOGLE_CLIENT_ID` を設定するか、  
-  `.env.example` に Client ID を記入して push（ビルド時に `.env` へコピー）
+- Environment Variables に `GOOGLE_CLIENT_SECRET` を必ず設定（Production / Preview）
+- `VITE_GOOGLE_CLIENT_ID` は `.env.example` からビルド時コピー可
 - 設定変更後は **Redeploy** が必要
 
 未設定・未連携時はデモデータで動作します。
