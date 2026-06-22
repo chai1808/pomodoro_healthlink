@@ -109,10 +109,11 @@ const AppContent = ({
                 onClick={onCloseDetails}
               />
               <aside
-                className="overflow-hidden details-sheet fixed inset-x-0 bottom-0 z-50 max-h-[100dvh] overflow-y-auto rounded-t-2xl border-t border-mono-border bg-mono-bg px-4 pt-4 pb-8 sm:px-6"
+                className="details-sheet fixed inset-x-0 bottom-0 z-50 flex h-dvh max-h-dvh flex-col rounded-t-2xl border-t border-mono-border bg-mono-bg sm:h-auto sm:max-h-[85dvh]"
                 aria-label="詳細データ"
               >
-                <div className="space-y-3">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6">
+                  <div className="space-y-3">
                   <WeatherBadge weather={snapshot.weather} />
                   <SleepSummary
                     records={snapshot.sleepRecords}
@@ -133,6 +134,7 @@ const AppContent = ({
                   >
                     Fitbit 連携を解除
                   </button>
+                </div>
                 </div>
               </aside>
             </>
