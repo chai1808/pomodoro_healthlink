@@ -3,7 +3,12 @@ export type OAuthCallbackResult =
   | { ok: false; message: string }
 
 export type CivilDate = { year?: number; month?: number; day?: number }
-export type CivilTime = { hours?: number; minutes?: number }
+export type CivilTime = {
+  hours?: number
+  minutes?: number
+  seconds?: number
+  nanos?: number
+}
 export type CivilDateTime = { date?: CivilDate; time?: CivilTime }
 
 export type HealthSleepInterval = {
@@ -23,6 +28,22 @@ export type HealthSleepPoint = {
 export type HealthStepsRollup = {
   rollupDataPoints?: Array<{
     civilStartTime?: CivilDateTime
+    civilEndTime?: CivilDateTime
     steps?: { countSum?: string }
   }>
+}
+
+export type HealthStepsInterval = {
+  startTime?: string
+  endTime?: string
+  civilStartTime?: CivilDateTime
+  civilEndTime?: CivilDateTime
+}
+
+export type HealthStepsPoint = {
+  steps?: {
+    count?: string
+    countSum?: string
+    interval?: HealthStepsInterval
+  }
 }

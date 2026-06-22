@@ -22,6 +22,16 @@ export const toCivilDate = (date: Date): CivilDateTime => ({
   date: { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() },
 })
 
+export const toCivilDateTimeStart = (date: Date): CivilDateTime => ({
+  date: { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() },
+  time: { hours: 0, minutes: 0, seconds: 0, nanos: 0 },
+})
+
+export const toCivilDateTimeEnd = (date: Date): CivilDateTime => ({
+  date: { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() },
+  time: { hours: 23, minutes: 59, seconds: 59, nanos: 0 },
+})
+
 export const isoDate = (date: Date): string => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')

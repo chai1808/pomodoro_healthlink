@@ -34,6 +34,8 @@ export const SleepSummary = ({
     )
   }
 
+  if (!isDemoData && records.length === 0) return null
+
   return (
     <section
       className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3"
@@ -60,9 +62,7 @@ export const SleepSummary = ({
       </div>
 
       {records.length === 0 ? (
-        <p className="py-4 text-center text-xs text-mono-muted">
-          {isDemoData ? 'デモデータがありません' : '睡眠データがありません'}
-        </p>
+        <p className="py-4 text-center text-xs text-mono-muted">デモデータがありません</p>
       ) : (
         <ul className="space-y-2">
           {records.slice(0, 3).map((record) => (

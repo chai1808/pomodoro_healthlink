@@ -34,7 +34,10 @@ export const ActivitySummary = ({
     )
   }
 
-  const steps = activity.dailySteps.slice(-DISPLAY_DAYS)
+  const steps = activity.dailySteps.filter((day) => day.date).slice(-DISPLAY_DAYS)
+
+  if (!isDemoData && steps.length === 0) return null
+
   const avgSteps = calcAvgSteps(steps)
 
   return (
@@ -65,9 +68,7 @@ export const ActivitySummary = ({
       </div>
 
       {steps.length === 0 ? (
-        <p className="py-4 text-center text-xs text-mono-muted">
-          {isDemoData ? 'デモデータがありません' : '歩数データがありません'}
-        </p>
+        <p className="py-4 text-center text-xs text-mono-muted">デモデータがありません</p>
       ) : (
         <ul className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-9">
           {steps.map((day, index) => (
