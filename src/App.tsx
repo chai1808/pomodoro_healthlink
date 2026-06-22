@@ -5,7 +5,7 @@ import { StatusOverlay } from './components/StatusOverlay'
 import { WeatherBadge } from './components/WeatherBadge'
 import { SleepSummary } from './components/SleepSummary'
 import { ActivitySummary } from './components/ActivitySummary'
-import { FitbitConnectButton } from './components/FitbitConnectButton'
+import { HealthConnectButton } from './components/HealthConnectButton'
 import { useHealthData } from './hooks/useHealthData'
 import { usePomodoroTimer } from './hooks/usePomodoroTimer'
 import { getPomodoroConfig } from './lib/healthJudgment'
@@ -17,9 +17,9 @@ type AppContentProps = {
   showDetails: boolean
   onToggleDetails: () => void
   onCloseDetails: () => void
-  fitbitConfigured: boolean
-  fitbitConnected: boolean
-  onDisconnectFitbit: () => void
+  healthConfigured: boolean
+  healthConnected: boolean
+  onDisconnect: () => void
 }
 
 const AppContent = ({
@@ -27,9 +27,9 @@ const AppContent = ({
   showDetails,
   onToggleDetails,
   onCloseDetails,
-  fitbitConfigured,
-  fitbitConnected,
-  onDisconnectFitbit,
+  healthConfigured,
+  healthConnected,
+  onDisconnect,
 }: AppContentProps) => {
   const config = getPomodoroConfig(snapshot.pomodoroMode)
   const isHealthy = snapshot.status === 'healthy'
@@ -88,7 +88,7 @@ const AppContent = ({
         )}
       </main>
 
-      {fitbitConnected ? (
+      {healthConnected ? (
         <>
           <button
             type="button"
@@ -117,15 +117,15 @@ const AppContent = ({
                   <SleepSummary
                     records={snapshot.sleepRecords}
                     avgSleepHours={snapshot.avgSleepHours}
-                    fitbitConfigured={fitbitConfigured}
+                    healthConfigured={healthConfigured}
                   />
                   <ActivitySummary
                     activity={snapshot.activity}
-                    fitbitConfigured={fitbitConfigured}
+                    healthConfigured={healthConfigured}
                   />
                   <button
                     type="button"
-                    onClick={onDisconnectFitbit}
+                    onClick={onDisconnect}
                     className="w-full duration-200 cursor-pointer rounded-full border border-mono-border/50 py-2.5 text-xs text-mono-muted transition-colors hover:border-mono-border hover:text-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
                     aria-label="Fitbit 連携を解除"
                   >
@@ -137,7 +137,7 @@ const AppContent = ({
           )}
         </>
       ) : (
-        <FitbitConnectButton />
+        <HealthConnectButton configured={healthConfigured} />
       )}
     </div>
   )
@@ -150,9 +150,9 @@ export default function App() {
     loading,
     error,
     refresh,
-    fitbitConfigured,
-    fitbitConnected,
-    disconnectFitbit,
+    healthConfigured,
+    healthConnected,
+    disconnect,
   } = useHealthData()
 
   useEffect(() => {
@@ -182,9 +182,9 @@ export default function App() {
     )
   }
 
-  const handleDisconnectFitbit = () => {
+  const handleDisconnect = () => {
     setShowDetails(false)
-    disconnectFitbit()
+    disconnect()
   }
 
   return (
@@ -194,10 +194,9 @@ export default function App() {
       showDetails={showDetails}
       onToggleDetails={() => setShowDetails((prev) => !prev)}
       onCloseDetails={() => setShowDetails(false)}
-      fitbitConfigured={fitbitConfigured}
-      fitbitConnected={fitbitConnected}
-      onDisconnectFitbit={handleDisconnectFitbit}
+      healthConfigured={healthConfigured}
+      healthConnected={healthConnected}
+      onDisconnect={handleDisconnect}
     />
   )
 }
-

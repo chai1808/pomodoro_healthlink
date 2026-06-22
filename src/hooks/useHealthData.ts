@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { buildHealthSnapshot } from '../lib/healthJudgment'
 import { resolveUserLocation } from '../lib/location'
 import {
-  disconnectFitbit,
-  fetchFitbitData,
-  handleFitbitCallback,
-  isFitbitAuthenticated,
-  isFitbitConfigured,
-} from '../services/fitbit/api'
+  disconnectHealth,
+  fetchHealthData,
+  handleOAuthCallback,
+  isHealthConfigured,
+  isHealthConnected,
+} from '../services/googleHealth/api'
 import { fetchWeather } from '../services/weather/api'
 import type { HealthSnapshot } from '../types'
 
@@ -15,8 +15,8 @@ type HealthDataState = {
   snapshot: HealthSnapshot | null
   loading: boolean
   error: string | null
-  fitbitConfigured: boolean
-  fitbitConnected: boolean
+  healthConfigured: boolean
+  healthConnected: boolean
 }
 
 export const useHealthData = () => {
@@ -24,8 +24,8 @@ export const useHealthData = () => {
     snapshot: null,
     loading: true,
     error: null,
-    fitbitConfigured: isFitbitConfigured(),
-    fitbitConnected: isFitbitAuthenticated(),
+    healthConfigured: isHealthConfigured(),
+    healthConnected: isHealthConnected(),
   })
 
   const loadData = useCallback(async () => {
@@ -36,27 +36,20 @@ export const useHealthData = () => {
     }))
 
     try {
-      await handleFitbitCallback()
+      await handleOAuthCallback()
 
       const location = await resolveUserLocation()
-
-      const [fitbit, weather] = await Promise.all([
-        fetchFitbitData(),
+      const [health, weather] = await Promise.all([
+        fetchHealthData(),
         fetchWeather(location),
       ])
 
-      const snapshot = buildHealthSnapshot(
-        fitbit.sleepRecords,
-        fitbit.activity,
-        weather,
-      )
-
       setState({
-        snapshot,
+        snapshot: buildHealthSnapshot(health.sleepRecords, health.activity, weather),
         loading: false,
         error: null,
-        fitbitConfigured: isFitbitConfigured(),
-        fitbitConnected: isFitbitAuthenticated(),
+        healthConfigured: isHealthConfigured(),
+        healthConnected: isHealthConnected(),
       })
     } catch (err) {
       const message =
@@ -71,13 +64,13 @@ export const useHealthData = () => {
   }, [])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  const handleDisconnectFitbit = useCallback(() => {
-    disconnectFitbit()
     void loadData()
   }, [loadData])
 
-  return { ...state, refresh: loadData, disconnectFitbit: handleDisconnectFitbit }
+  const disconnect = useCallback(() => {
+    disconnectHealth()
+    void loadData()
+  }, [loadData])
+
+  return { ...state, refresh: loadData, disconnect }
 }

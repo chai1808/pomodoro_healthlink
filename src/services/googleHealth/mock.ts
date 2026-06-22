@@ -7,24 +7,9 @@ const formatDate = (daysAgo: number): string => {
 }
 
 export const MOCK_SLEEP_RECORDS: SleepRecord[] = [
-  {
-    date: formatDate(1),
-    sleepStart: '23:15',
-    wakeTime: '06:15',
-    minutesAsleep: 420,
-  },
-  {
-    date: formatDate(2),
-    sleepStart: '00:30',
-    wakeTime: '07:00',
-    minutesAsleep: 390,
-  },
-  {
-    date: formatDate(3),
-    sleepStart: '22:45',
-    wakeTime: '06:15',
-    minutesAsleep: 450,
-  },
+  { date: formatDate(1), sleepStart: '23:15', wakeTime: '06:15', minutesAsleep: 420 },
+  { date: formatDate(2), sleepStart: '00:30', wakeTime: '07:00', minutesAsleep: 390 },
+  { date: formatDate(3), sleepStart: '22:45', wakeTime: '06:15', minutesAsleep: 450 },
 ]
 
 export const MOCK_ACTIVITY: ActivityData = {

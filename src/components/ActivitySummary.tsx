@@ -1,9 +1,9 @@
-import { FitbitSetupNotice } from './FitbitSetupNotice'
+import { HealthSetupNotice } from './HealthSetupNotice'
 import type { ActivityData } from '../types'
 
 type ActivitySummaryProps = {
   activity: ActivityData
-  fitbitConfigured: boolean
+  healthConfigured: boolean
 }
 
 const DISPLAY_DAYS = 6
@@ -16,9 +16,9 @@ const calcAvgSteps = (steps: ActivityData['dailySteps']): number => {
 
 export const ActivitySummary = ({
   activity,
-  fitbitConfigured,
+  healthConfigured,
 }: ActivitySummaryProps) => {
-  if (!fitbitConfigured) {
+  if (!healthConfigured) {
     return (
       <section
         className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3"
@@ -27,7 +27,7 @@ export const ActivitySummary = ({
         <h2 className="mb-2 text-xs tracking-widest text-mono-muted uppercase">
           Activity
         </h2>
-        <FitbitSetupNotice />
+        <HealthSetupNotice />
       </section>
     )
   }

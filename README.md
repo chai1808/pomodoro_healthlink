@@ -1,6 +1,6 @@
 # Pomodoro Healthlink
 
-睡眠（Fitbit）・気圧（Open-Meteo）・活動量に連動するポモドーロタイマー PWA です。
+睡眠（Google Health API / Fitbit）・気圧（Open-Meteo）・活動量に連動するポモドーロタイマー PWA です。
 
 > **AI 補助について**  
 > 本プロジェクトの設計・実装・ドキュメント整備の一部に、Cursor 上の AI（LLM）を補助ツールとして使用しています。  
@@ -13,10 +13,11 @@
 | フレームワーク | Vite + React + TypeScript |
 | スタイル | Tailwind CSS v4 |
 | 配布形式 | PWA（ホーム画面追加・通知対応） |
+| 公開 URL | https://pomodoro-healthlink.vercel.app |
 
 ## 機能
 
-- **Fitbit Web API** — 睡眠3日分・歩数（未連携時はデモデータ）
+- **Google Health API** — Fitbit デバイスの睡眠3日分・歩数（未連携時はデモデータ）
 - **Open-Meteo API** — 天気・湿度・海平面気圧（API キー不要）
 - **Geolocation API** — 利用者の現在地から天気・気圧を取得
 - **Open-Meteo Geocoding** — 逆ジオコーディングで市区町村名を表示
@@ -34,7 +35,7 @@
 | 平均睡眠 < 7h | **睡眠日** — タイマー無効・画面グレーアウト |
 | 活動スコア < 70% | **運動日** — タイマー無効・画面グレーアウト |
 
-- **平均睡眠**: 直近3日の Fitbit 睡眠時間の平均
+- **平均睡眠**: 直近3日の睡眠時間の平均
 - **活動スコア**: 直近7日平均歩数 ÷ 直近28日平均歩数（70% 以上で合格）
 
 ### 2. ポモドーロモード（体調良好時のみ）
@@ -44,83 +45,50 @@
 | 当日の気圧変動幅 ≤ 4 hPa **かつ** 先2日に注意報・6時間急降下なし | **optimal** | 25分作業 / 5分休憩 × 6 | 2回 |
 | それ以外 | **reduced** | 15分作業 / 5分休憩 × 3 | 1回 |
 
-**気圧判定の詳細**
-
-| 指標 | 算出方法 |
-|------|----------|
-| 当日の変動幅 | 当日0時〜24時の hourly 気圧 max − min |
-| 先2日の急降下 | 各6時間スライディング窓での最大降下（≥ 4 hPa で注意） |
-| 気象庁注意報 | r8 注意報 API の当日発表 + 予報の強風リスク |
-
-## 詳細パネル UI
-
-| セクション | 表示内容 |
-|------------|----------|
-| 天気 | 位置・気象庁エリア名、現在の天気、気圧折れ線（3日分）、当日/先2日の判定テキスト |
-| 睡眠 | 直近3日（`yyyy-MM-dd`）・平均睡眠時間 |
-| 活動量 | 直近6日の歩数リスト・平均歩数（PC は2段組み） |
-
-**レスポンシブ**
-
-- 天気: スマホは縦並び + 折れ線は横スクロール（`min-width: 480px`）、PC は横並び + 幅追従
-- 活動量: スマホ1列 / PC 2列
-
 ## セットアップ
 
 ```bash
 npm install
-cp .env.example .env
+cp .env.example .env   # VITE_GOOGLE_CLIENT_ID を記入
 npm run dev
 ```
 
-### 位置情報（利用者ごとに自動解決）
-
-天気・気圧・気象庁注意報の位置は、**各利用者のブラウザ**で次の優先順位で決まります。環境変数での座標指定は不要です。
-
-| 優先 | ソース | 説明 |
-|------|--------|------|
-| 1 | Geolocation API | ブラウザの位置情報（許可時） |
-| 2 | localStorage キャッシュ | 前回 Geolocation で取得した座標・地名 |
-| 3 | 名古屋市（デフォルト） | 35.1814, 136.9063 — 拒否時のフォールバック |
-
-**地名・気象庁エリアの自動判定**
-
-1. Open-Meteo 逆ジオコーディング → 表示用の市区町村名（例: `名古屋市`）
-2. 最寄り AMEDAS 観測所 → 地方気象台コード（`area.json`）
-3. 地名マッチング → 気象庁の市区町村コード（予報エリア / class20）
-
-天気カードには `位置: 名古屋市 · 気象庁: 名古屋 名古屋市` のように表示されます。フォールバック利用時は `（デフォルト）` が付きます。
-
-公開デモとして GitHub Pages 等に載せても、訪問者は**自分の位置**の天気が表示されます（位置情報を許可した場合）。  
-Fitbit データは各ユーザーのブラウザ内のみで、未連携時は全員同じデモデータです。
-
-> 本番公開時は **HTTPS** が必要です（Geolocation API の要件）。`localhost` は開発時のみ HTTP 可。
+`npm run dev` / `npm run build` は `.env` が無い場合 `.env.example` を自動コピーします。
 
 ### 環境変数
 
 | 変数 | 必須 | 説明 |
 |------|------|------|
-| `VITE_FITBIT_CLIENT_ID` | 任意 | Fitbit OAuth Client ID |
-| `VITE_FITBIT_REDIRECT_URI` | 任意 | 未設定時は起動 origin を使用 |
+| `VITE_GOOGLE_CLIENT_ID` | 任意 | Google Cloud Console の OAuth クライアント ID |
+| `VITE_GOOGLE_REDIRECT_URI` | 任意 | 未設定時は起動 origin を使用 |
 
-Fitbit 未設定・未連携時はデモデータで動作します。
+**Google Cloud Console 設定**
+
+1. プロジェクト作成 → **Google Health API** を有効化
+2. OAuth 同意画面（外部）を設定
+3. OAuth クライアント ID（**ウェブアプリケーション**）を作成
+4. 承認済み JavaScript 生成元・リダイレクト URI に以下を追加  
+   - 開発: `http://localhost:5173/`  
+   - 本番: `https://pomodoro-healthlink.vercel.app/`
+
+**Vercel 公開時**
+
+- Vercel の Environment Variables に `VITE_GOOGLE_CLIENT_ID` を設定するか、  
+  `.env.example` に Client ID を記入して push（ビルド時に `.env` へコピー）
+- 設定変更後は **Redeploy** が必要
+
+未設定・未連携時はデモデータで動作します。
 
 ## プロジェクト構成
 
 ```
 src/
-├── components/     # UI（TimerCircle, WeatherBadge, SleepSummary 等）
+├── components/     # UI（TimerCircle, WeatherBadge, HealthConnectButton 等）
 ├── hooks/          # useHealthData, usePomodoroTimer
-├── lib/
-│   ├── location.ts       # Geolocation + 逆ジオコーディング + キャッシュ
-│   ├── healthJudgment.ts # 体調・気圧判定
-│   └── ...
 ├── services/
-│   ├── fitbit/     # Fitbit API + モック
-│   ├── jma/
-│   │   ├── api.ts      # 注意報・予報取得
-│   │   └── region.ts   # 座標 → 気象台・市区町村
-│   └── weather/    # Open-Meteo
+│   ├── googleHealth/   # Google Health API + OAuth + モック
+│   ├── jma/            # 気象庁 API
+│   └── weather/        # Open-Meteo
 └── types/
 ```
 
@@ -131,7 +99,7 @@ src/
 | Open-Meteo Forecast | 天気・気圧 | 不要 |
 | Open-Meteo Geocoding | 逆ジオコーディング | 不要 |
 | 気象庁 bosai | 注意報・予報 | 不要 |
-| Fitbit Web API | 睡眠・歩数 | OAuth（任意） |
+| Google Health API | 睡眠・歩数（Fitbit 等） | Google OAuth |
 
 ## ビルド・公開
 
@@ -139,13 +107,6 @@ src/
 npm run build
 npm run preview
 ```
-
-## スマホでの利用
-
-1. `npm run dev` またはビルド成果物をホスト
-2. ブラウザで位置情報を許可
-3. 「ホーム画面に追加」
-4. 通知許可をオンにする
 
 ## ライセンス
 

@@ -1,10 +1,10 @@
-import { FitbitSetupNotice } from './FitbitSetupNotice'
+import { HealthSetupNotice } from './HealthSetupNotice'
 import type { SleepRecord } from '../types'
 
 type SleepSummaryProps = {
   records: SleepRecord[]
   avgSleepHours: number
-  fitbitConfigured: boolean
+  healthConfigured: boolean
 }
 
 const formatDuration = (minutes: number): string => {
@@ -16,9 +16,9 @@ const formatDuration = (minutes: number): string => {
 export const SleepSummary = ({
   records,
   avgSleepHours,
-  fitbitConfigured,
+  healthConfigured,
 }: SleepSummaryProps) => {
-  if (!fitbitConfigured) {
+  if (!healthConfigured) {
     return (
       <section
         className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3"
@@ -27,7 +27,7 @@ export const SleepSummary = ({
         <h2 className="mb-2 text-xs tracking-widest text-mono-muted uppercase">
           Sleep
         </h2>
-        <FitbitSetupNotice />
+        <HealthSetupNotice />
       </section>
     )
   }
