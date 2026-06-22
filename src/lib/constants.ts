@@ -1,4 +1,5 @@
 export const MIN_ACTIVITY_SCORE = 0.7
+export const SLEEP_RECENT_DAYS = 8
 
 export const PRESSURE_RANGE_THRESHOLD = 4
 export const MAX_DROP_THRESHOLD = 4

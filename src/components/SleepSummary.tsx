@@ -1,5 +1,8 @@
 import type { SleepRecord } from '../types'
-import { isoDate } from '../lib/utils'
+import {
+  calcRecentAvgSleepHours,
+  getRecentSleepRecords,
+} from '../lib/healthJudgment'
 
 type SleepSummaryProps = {
   records: SleepRecord[]
@@ -7,24 +10,10 @@ type SleepSummaryProps = {
   healthConnected: boolean
 }
 
-const DISPLAY_DAYS = 8
-
-const isValidSleepRecord = (record: SleepRecord): boolean =>
-  /^\d{4}-\d{2}-\d{2}$/.test(record.date) && record.minutesAsleep > 0
-
 const formatDuration = (minutes: number): string => {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return `${h}時間${m > 0 ? `${m}分` : ''}`
-}
-
-const calcAvgSleepHours = (records: SleepRecord[]): number => {
-  if (records.length === 0) return 0
-  const totalHours = records.reduce(
-    (sum, record) => sum + record.minutesAsleep / 60,
-    0,
-  )
-  return totalHours / records.length
 }
 
 export const SleepSummary = ({
@@ -34,17 +23,11 @@ export const SleepSummary = ({
 }: SleepSummaryProps) => {
   if (!healthConfigured || !healthConnected) return null
 
-  const today = isoDate(new Date())
-
-  const sleepRecords = [...records]
-    .filter(isValidSleepRecord)
-    .filter((record) => record.date <= today)
-    .sort((left, right) => right.date.localeCompare(left.date))
-    .slice(0, DISPLAY_DAYS)
+  const sleepRecords = getRecentSleepRecords(records)
 
   if (sleepRecords.length === 0) return null
 
-  const avgSleepHours = calcAvgSleepHours(sleepRecords)
+  const avgSleepHours = calcRecentAvgSleepHours(records)
 
   return (
     <section

@@ -3,6 +3,7 @@ import {
   MAX_DROP_THRESHOLD,
   PRESSURE_RANGE_THRESHOLD,
   POMODORO_CONFIGS,
+  SLEEP_RECENT_DAYS,
 } from './constants'
 import type {
   ActivityData,
@@ -115,57 +116,42 @@ export const getForecastMaxDropText = (
   return `急降下なし（${value}）`
 }
 
-const SLEEP_BASELINE_DAYS = 7
+const isValidSleepRecord = (record: SleepRecord): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(record.date) && record.minutesAsleep > 0
 
-const calcTodaySleepRatio = (records: SleepRecord[]): number | null => {
-  const sleepByDate = new Map<string, number>()
-
-  for (const record of records) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(record.date)) continue
-    sleepByDate.set(record.date, record.minutesAsleep / 60)
-  }
-
-  const today = startOfDay()
-  const todayKey = isoDate(today)
-  const todayHours = sleepByDate.get(todayKey) ?? 0
-
-  const hasSleepHistory = [...sleepByDate.values()].some((hours) => hours > 0)
-  if (!hasSleepHistory) return null
-
-  const past7Days: number[] = []
-  for (let offset = 1; offset <= SLEEP_BASELINE_DAYS; offset += 1) {
-    const key = isoDate(addDays(today, -offset))
-    past7Days.push(sleepByDate.get(key) ?? 0)
-  }
-
-  if (past7Days.length < SLEEP_BASELINE_DAYS) return null
-
-  const average =
-    past7Days.reduce((sum, hours) => sum + hours, 0) / past7Days.length
-
-  if (average === 0) return null
-
-  return Math.round((todayHours / average) * 100) / 100
+export const getRecentSleepRecords = (
+  records: SleepRecord[],
+  maxDays = SLEEP_RECENT_DAYS,
+): SleepRecord[] => {
+  const today = isoDate(startOfDay())
+  return [...records]
+    .filter((record) => isValidSleepRecord(record) && record.date <= today)
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, maxDays)
 }
 
-const calcDisplayAvgSleepHours = (records: SleepRecord[]): number => {
-  const today = isoDate(startOfDay())
-  const recent = records
-    .filter(
-      (record) =>
-        /^\d{4}-\d{2}-\d{2}$/.test(record.date) &&
-        record.date <= today &&
-        record.minutesAsleep > 0,
-    )
-    .sort((left, right) => right.date.localeCompare(left.date))
-    .slice(0, 8)
-
+export const calcRecentAvgSleepHours = (records: SleepRecord[]): number => {
+  const recent = getRecentSleepRecords(records)
   if (recent.length === 0) return 0
 
   return (
     recent.reduce((sum, record) => sum + record.minutesAsleep / 60, 0) /
     recent.length
   )
+}
+
+const calcTodaySleepRatio = (records: SleepRecord[]): number | null => {
+  const recent = getRecentSleepRecords(records)
+  if (recent.length === 0) return null
+
+  const todayKey = isoDate(startOfDay())
+  const todayRecord = recent.find((record) => record.date === todayKey)
+  const todayHours = todayRecord ? todayRecord.minutesAsleep / 60 : 0
+
+  const average = calcRecentAvgSleepHours(records)
+  if (average === 0) return null
+
+  return Math.round((todayHours / average) * 100) / 100
 }
 
 const isoDate = (date: Date): string => {
@@ -270,7 +256,7 @@ export const buildHealthSnapshot = (
       : 'reduced'
 
   return {
-    avgSleepHours: calcDisplayAvgSleepHours(sleepRecords),
+    avgSleepHours: calcRecentAvgSleepHours(sleepRecords),
     status,
     pomodoroMode,
     sleepRecords,
