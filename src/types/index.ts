@@ -58,7 +58,6 @@ export type HealthSnapshot = {
   sleepRecords: SleepRecord[]
   weather: WeatherInfo
   activity: ActivityData
-  isDemoData: boolean
 }
 
 export type PomodoroConfig = {

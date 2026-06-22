@@ -52,7 +52,6 @@ export const useHealthData = () => {
           health.sleepRecords,
           health.activity,
           weather,
-          health.isDemoData,
         ),
         loading: false,
         error: null,

@@ -176,9 +176,8 @@ const calcActivityScore = (activity: ActivityData): number | null => {
 const evaluateHealthStatus = (
   avgSleepHours: number | null,
   activityScore: number | null,
-  isDemoData: boolean,
 ): HealthStatus => {
-  if (!isDemoData && (avgSleepHours === null || activityScore === null)) {
+  if (avgSleepHours === null || activityScore === null) {
     return 'data_unavailable'
   }
 
@@ -215,14 +214,12 @@ export const buildHealthSnapshot = (
   sleepRecords: SleepRecord[],
   activity: ActivityData,
   weather: WeatherInfo,
-  isDemoData = false,
 ): HealthSnapshot => {
   const avgSleepHours = calcAvgSleepHours(sleepRecords) ?? 0
   const activityScore = calcActivityScore(activity)
   const status = evaluateHealthStatus(
     calcAvgSleepHours(sleepRecords),
     activityScore,
-    isDemoData,
   )
   const jmaForecastLabels = [
     ...new Set(
@@ -247,6 +244,5 @@ export const buildHealthSnapshot = (
     sleepRecords,
     weather,
     activity,
-    isDemoData,
   }
 }

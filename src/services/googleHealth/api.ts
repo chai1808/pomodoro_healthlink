@@ -8,7 +8,6 @@ import {
   toCivilDateTimeEnd,
   toCivilDateTimeStart,
 } from './format'
-import { MOCK_ACTIVITY, MOCK_SLEEP_RECORDS } from './mock'
 import type { HealthSleepPoint, HealthStepsPoint, HealthStepsRollup } from './types'
 
 const EMPTY_ACTIVITY: ActivityData = {
@@ -53,10 +52,17 @@ const fetchSleepRecords = async (): Promise<SleepRecord[]> => {
     `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=25&filter=${filter}`,
   )
 
-  return (data.dataPoints ?? [])
+  const raw = data.dataPoints ?? []
+  console.log('[google-health] sleep response:', raw)
+
+  const records = raw
     .map(parseSleepRecord)
     .filter((record): record is SleepRecord => record !== null)
     .slice(0, 3)
+
+  console.log('[google-health] sleep parsed:', records)
+
+  return records
 }
 
 const buildActivityData = (dailySteps: DailySteps[]): ActivityData => ({
@@ -128,6 +134,8 @@ const fetchActivityViaDailyRollUp = async (
     },
   )
 
+  console.log('[google-health] steps dailyRollUp response:', data.rollupDataPoints ?? [])
+
   return buildActivityData(parseRollupSteps(data))
 }
 
@@ -143,11 +151,16 @@ const fetchActivityViaList = async (start: Date, end: Date): Promise<ActivityDat
     `/users/me/dataTypes/steps/dataPoints?pageSize=100&filter=${filter}`,
   )
 
+  console.log('[google-health] steps list response:', data.dataPoints ?? [])
+
   const points = (data.dataPoints ?? [])
     .map(parseStepsListPoint)
     .filter((point): point is { date: string; steps: number } => point !== null)
 
-  return buildActivityData(aggregateStepsByDate(points))
+  const dailySteps = aggregateStepsByDate(points)
+  console.log('[google-health] steps parsed:', dailySteps)
+
+  return buildActivityData(dailySteps)
 }
 
 const fetchActivityData = async (): Promise<ActivityData> => {
@@ -167,22 +180,23 @@ const fetchActivityData = async (): Promise<ActivityData> => {
 export const fetchHealthData = async (): Promise<{
   sleepRecords: SleepRecord[]
   activity: ActivityData
-  isDemoData: boolean
 }> => {
   if (!isHealthConnected()) {
-    return {
-      sleepRecords: MOCK_SLEEP_RECORDS,
-      activity: MOCK_ACTIVITY,
-      isDemoData: true,
-    }
+    return { sleepRecords: [], activity: EMPTY_ACTIVITY }
   }
 
   const [sleepRecords, activity] = await Promise.all([
-    fetchSleepRecords().catch(() => [] as SleepRecord[]),
-    fetchActivityData().catch(() => EMPTY_ACTIVITY),
+    fetchSleepRecords().catch((err) => {
+      console.warn('[google-health] sleep fetch failed:', err)
+      return [] as SleepRecord[]
+    }),
+    fetchActivityData().catch((err) => {
+      console.warn('[google-health] activity fetch failed:', err)
+      return EMPTY_ACTIVITY
+    }),
   ])
 
-  return { sleepRecords, activity, isDemoData: false }
+  return { sleepRecords, activity }
 }
 
 export {

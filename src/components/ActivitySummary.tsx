@@ -4,7 +4,6 @@ import type { ActivityData } from '../types'
 type ActivitySummaryProps = {
   activity: ActivityData
   healthConfigured: boolean
-  isDemoData: boolean
 }
 
 const DISPLAY_DAYS = 6
@@ -18,7 +17,6 @@ const calcAvgSteps = (steps: ActivityData['dailySteps']): number => {
 export const ActivitySummary = ({
   activity,
   healthConfigured,
-  isDemoData,
 }: ActivitySummaryProps) => {
   if (!healthConfigured) {
     return (
@@ -36,7 +34,7 @@ export const ActivitySummary = ({
 
   const steps = activity.dailySteps.filter((day) => day.date).slice(-DISPLAY_DAYS)
 
-  if (!isDemoData && steps.length === 0) return null
+  if (steps.length === 0) return null
 
   const avgSteps = calcAvgSteps(steps)
 
@@ -46,46 +44,33 @@ export const ActivitySummary = ({
       aria-label="活動量"
     >
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xs tracking-widest text-mono-muted uppercase">
-            Activity
-          </h2>
-          {isDemoData && (
-            <span className="rounded-full border border-mono-border px-2 py-0.5 text-[10px] text-mono-muted">
-              デモ
-            </span>
-          )}
-        </div>
-        {steps.length > 0 && (
-          <p className="text-sm text-mono-muted">
-            平均{' '}
-            <span className="font-mono text-mono-text">
-              {avgSteps.toLocaleString()}
-            </span>
-            <span className="text-mono-muted"> 歩</span>
-          </p>
-        )}
+        <h2 className="text-xs tracking-widest text-mono-muted uppercase">
+          Activity
+        </h2>
+        <p className="text-sm text-mono-muted">
+          平均{' '}
+          <span className="font-mono text-mono-text">
+            {avgSteps.toLocaleString()}
+          </span>
+          <span className="text-mono-muted"> 歩</span>
+        </p>
       </div>
 
-      {steps.length === 0 ? (
-        <p className="py-4 text-center text-xs text-mono-muted">デモデータがありません</p>
-      ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-9">
-          {steps.map((day, index) => (
-            <li
-              key={day.date}
-              className={`flex items-baseline justify-between py-2 text-xs ${
-                index > 0 ? 'border-t border-mono-border/50' : ''
-              } ${index >= 2 ? 'sm:border-t' : 'sm:border-t-0'}`}
-            >
-              <span className="font-mono text-mono-text">{day.date}</span>
-              <span className="font-mono text-mono-text">
-                {day.steps.toLocaleString()} 歩
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-9">
+        {steps.map((day, index) => (
+          <li
+            key={day.date}
+            className={`flex items-baseline justify-between py-2 text-xs ${
+              index > 0 ? 'border-t border-mono-border/50' : ''
+            } ${index >= 2 ? 'sm:border-t' : 'sm:border-t-0'}`}
+          >
+            <span className="font-mono text-mono-text">{day.date}</span>
+            <span className="font-mono text-mono-text">
+              {day.steps.toLocaleString()} 歩
+            </span>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
