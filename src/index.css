@@ -43,3 +43,5 @@ body {
 /* letter spacingだけ設定していたら中央寄せにならないので、text-indentを設定 */
 .tracking-wider{ text-indent: var(--tracking-wider); }
 .tracking-widest{ text-indent: var(--tracking-widest); }
+
+.oveflow-hidden{ overflow: hidden; }
