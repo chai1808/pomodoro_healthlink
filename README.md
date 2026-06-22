@@ -25,6 +25,14 @@
 - **ポモドーロタイマー** — 体調・気圧に応じて作業時間を自動調整
 - **PWA 通知** — フェーズ切替・セッション完了
 
+### 連携 UI
+
+| 状態 | 表示 |
+|------|------|
+| OAuth 未設定（`VITE_GOOGLE_CLIENT_ID` なし） | 「Fitbit連携」ボタン（無効） |
+| 未連携 | 「Fitbit連携」ボタン |
+| 連携済み | 「詳細」ボタン + 「Fitbit 連携を解除」 |
+
 ## 判定ロジック
 
 ### 1. 体調判定（タイマー ON/OFF）
@@ -49,7 +57,8 @@
 
 ```bash
 npm install
-cp .env.example .env   # VITE_GOOGLE_CLIENT_ID を記入
+cp .env.example .env
+# .env に VITE_GOOGLE_CLIENT_ID と GOOGLE_CLIENT_SECRET を記入
 npm run dev
 ```
 
@@ -57,40 +66,73 @@ npm run dev
 
 ### 環境変数
 
-| 変数 | 必須 | 説明 |
-|------|------|------|
-| `VITE_GOOGLE_CLIENT_ID` | 任意 | Google Cloud Console の OAuth クライアント ID |
-| `VITE_GOOGLE_REDIRECT_URI` | 任意 | OAuth コールバック URL（未設定時は `{origin}/`） |
-| `GOOGLE_CLIENT_SECRET` | 連携時必須 | OAuth クライアント シークレット（**サーバー側のみ**。VITE_ 不可） |
+| 変数 | 公開 | 必須 | 説明 |
+|------|------|------|------|
+| `VITE_GOOGLE_CLIENT_ID` | クライアント | 連携時 | Google Cloud Console の OAuth クライアント ID |
+| `VITE_GOOGLE_REDIRECT_URI` | クライアント | 連携時 | OAuth コールバック URL |
+| `GOOGLE_CLIENT_SECRET` | **サーバーのみ** | 連携時 | OAuth クライアント シークレット（`VITE_` 不可・Git に含めない） |
 
 **Google Cloud Console 設定**
 
 1. プロジェクト作成 → **Google Health API** を有効化
-2. OAuth 同意画面（外部）を設定
+2. OAuth 同意画面（外部）を設定（Testing モードではテストユーザーを追加）
 3. OAuth クライアント ID（**ウェブアプリケーション**）を作成
 4. **クライアント シークレット**を控える → Vercel / ローカル `.env` に `GOOGLE_CLIENT_SECRET` として設定
 5. 承認済みリダイレクト URI に以下を追加  
    - 本番: `https://pomodoro-healthlink.vercel.app/auth/google/callback`  
    - 開発: `http://localhost:5173/auth/google/callback`
 
-**Vercel 公開時**
+**Vercel 公開時（必須チェックリスト）**
 
-- Environment Variables に `GOOGLE_CLIENT_SECRET` を必ず設定（Production / Preview）
-- `VITE_GOOGLE_CLIENT_ID` は `.env.example` からビルド時コピー可
-- 設定変更後は **Redeploy** が必要
+- [ ] `GOOGLE_CLIENT_SECRET` を Environment Variables に設定（Production / Preview）
+- [ ] `VITE_GOOGLE_CLIENT_ID` を設定（または `.env.example` からビルド時コピー）
+- [ ] `VITE_GOOGLE_REDIRECT_URI` が Google Console の URI と一致
+- [ ] 設定変更後に **Redeploy**
 
 未設定・未連携時はデモデータで動作します。
+
+### OAuth フロー
+
+```
+[Fitbit連携] → Google 同意画面
+     ↓
+/auth/google/callback?code=...
+     ↓
+POST /api/google/token  （client_secret をサーバー側で付与）
+     ↓
+localStorage に access / refresh token 保存
+     ↓
+Google Health API で睡眠・歩数取得
+```
+
+- トークン交換は **Vercel Serverless Function**（`api/google/token.js`）または `vite.config.ts` の開発用ミドルウェアで実行
+- `client_secret` はブラウザに露出させない
+
+## トラブルシューティング
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| 「Fitbit連携」が無反応 | `VITE_GOOGLE_CLIENT_ID` 未設定 | `.env` を確認して dev サーバー再起動 |
+| `client_secret is missing` | トークン API に secret 未設定 | `GOOGLE_CLIENT_SECRET` を Vercel / `.env` に追加 |
+| `GOOGLE_CLIENT_SECRET is not configured` | Vercel に secret なし | Dashboard で設定 → Redeploy |
+| 同意後に連携失敗 | リダイレクト URI 不一致 | Console と `VITE_GOOGLE_REDIRECT_URI` を照合 |
+| 「未検証アプリ」警告 | OAuth が Testing モード | テストユーザー追加 or アプリ審査 |
 
 ## プロジェクト構成
 
 ```
+api/
+├── google/token.js          # Vercel: OAuth トークン交換
+└── lib/exchangeGoogleToken.js
+scripts/
+└── sync-env.mjs             # .env 自動コピー
 src/
-├── components/     # UI（TimerCircle, WeatherBadge, HealthConnectButton 等）
-├── hooks/          # useHealthData, usePomodoroTimer
+├── components/              # UI（TimerCircle, WeatherBadge, HealthConnectButton 等）
+├── hooks/                   # useHealthData, usePomodoroTimer
 ├── services/
-│   ├── googleHealth/   # Google Health API + OAuth + モック
-│   ├── jma/            # 気象庁 API
-│   └── weather/        # Open-Meteo
+│   ├── googleHealth/        # OAuth, API, モック, 日付フォーマット
+│   ├── jma/                 # 気象庁 API
+│   └── weather/             # Open-Meteo
 └── types/
 ```
 
@@ -101,7 +143,7 @@ src/
 | Open-Meteo Forecast | 天気・気圧 | 不要 |
 | Open-Meteo Geocoding | 逆ジオコーディング | 不要 |
 | 気象庁 bosai | 注意報・予報 | 不要 |
-| Google Health API | 睡眠・歩数（Fitbit 等） | Google OAuth |
+| Google Health API | 睡眠・歩数（Fitbit 等） | Google OAuth（PKCE + サーバー側 secret） |
 
 ## ビルド・公開
 
@@ -109,6 +151,8 @@ src/
 npm run build
 npm run preview
 ```
+
+Vercel では `vercel.json` により `/api/*` 以外を SPA にルーティングします。
 
 ## ライセンス
 

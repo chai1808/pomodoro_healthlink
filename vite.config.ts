@@ -1,44 +1,48 @@
-// @ts-nocheck
-import { defineConfig, loadEnv } from 'vite'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+// @ts-expect-error JS module without bundled types
 import { exchangeGoogleToken } from './api/lib/exchangeGoogleToken.js'
 
-const readRequestBody = (req) =>
+const readRequestBody = (req: IncomingMessage): Promise<string> =>
   new Promise((resolve, reject) => {
-    const chunks = []
+    const chunks: Buffer[] = []
     req.on('data', (chunk) => chunks.push(chunk))
     req.on('end', () => resolve(Buffer.concat(chunks).toString()))
     req.on('error', reject)
   })
 
-const googleTokenApiPlugin = (clientSecret) => ({
+const googleTokenApiPlugin = (clientSecret: string): Plugin => ({
   name: 'google-token-api',
   configureServer(server) {
-    server.middlewares.use('/api/google/token', async (req, res, next) => {
-      if (req.method !== 'POST') {
-        next()
-        return
-      }
+    server.middlewares.use(
+      '/api/google/token',
+      async (req, res, next) => {
+        if (req.method !== 'POST') {
+          next()
+          return
+        }
 
-      try {
-        const body = await readRequestBody(req)
-        const { status, text } = await exchangeGoogleToken(body, clientSecret)
-        res.statusCode = status
-        res.setHeader('Content-Type', 'application/json')
-        res.end(text)
-      } catch (err) {
-        res.statusCode = 500
-        res.setHeader('Content-Type', 'application/json')
-        res.end(
-          JSON.stringify({
-            error: 'proxy_failed',
-            message: err instanceof Error ? err.message : 'Unknown error',
-          }),
-        )
-      }
-    })
+        try {
+          const body = await readRequestBody(req)
+          const { status, text } = await exchangeGoogleToken(body, clientSecret)
+          res.statusCode = status
+          res.setHeader('Content-Type', 'application/json')
+          ;(res as ServerResponse).end(text)
+        } catch (err) {
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+          ;(res as ServerResponse).end(
+            JSON.stringify({
+              error: 'proxy_failed',
+              message: err instanceof Error ? err.message : 'Unknown error',
+            }),
+          )
+        }
+      },
+    )
   },
 })
 

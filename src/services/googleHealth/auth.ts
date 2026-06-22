@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from '../../lib/constants'
+import type { OAuthCallbackResult } from './types'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 const REDIRECT_URI =
@@ -9,10 +10,6 @@ const SCOPES = [
   'https://www.googleapis.com/auth/googlehealth.sleep.readonly',
   'https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly',
 ]
-
-export type OAuthCallbackResult =
-  | { ok: true }
-  | { ok: false; message: string }
 
 const getAccessToken = (): string | null =>
   localStorage.getItem(STORAGE_KEYS.googleHealthAccessToken)
@@ -31,6 +28,15 @@ export const isHealthConfigured = (): boolean => Boolean(CLIENT_ID)
 
 export const isHealthConnected = (): boolean =>
   Boolean(getAccessToken() || getRefreshToken())
+
+const clearOAuthSession = (): void => {
+  sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier)
+  sessionStorage.removeItem(STORAGE_KEYS.oauthProcessedCode)
+}
+
+const finishOAuthRedirect = (): void => {
+  window.history.replaceState({}, '', '/')
+}
 
 const base64Url = (buffer: ArrayBuffer | Uint8Array): string => {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
@@ -75,22 +81,22 @@ export const startHealthAuth = async (): Promise<void> => {
 export const disconnectHealth = (): void => {
   localStorage.removeItem(STORAGE_KEYS.googleHealthAccessToken)
   localStorage.removeItem(STORAGE_KEYS.googleHealthRefreshToken)
-  sessionStorage.removeItem(STORAGE_KEYS.oauthProcessedCode)
+  clearOAuthSession()
 }
 
 const parseTokenError = async (response: Response): Promise<string> => {
   const text = await response.text()
   try {
     const data = JSON.parse(text) as { error?: string; error_description?: string }
-    if (data.error_description) return data.error_description
-    if (data.error) return data.error
+    return data.error_description ?? data.error ?? `HTTP ${response.status}`
   } catch {
-    if (text) return text.slice(0, 120)
+    return text.slice(0, 120) || `HTTP ${response.status}`
   }
-  return `HTTP ${response.status}`
 }
 
-const exchangeToken = async (body: URLSearchParams): Promise<{ ok: true } | { ok: false; message: string }> => {
+const exchangeToken = async (
+  body: URLSearchParams,
+): Promise<{ ok: true } | { ok: false; message: string }> => {
   let response: Response
   try {
     response = await fetch(TOKEN_URL, {
@@ -119,23 +125,25 @@ const exchangeToken = async (body: URLSearchParams): Promise<{ ok: true } | { ok
 export const handleOAuthCallback = async (): Promise<OAuthCallbackResult> => {
   const params = new URLSearchParams(window.location.search)
   const oauthError = params.get('error')
+
   if (oauthError) {
-    const description = params.get('error_description') ?? oauthError
-    window.history.replaceState({}, '', '/')
-    return { ok: false, message: description }
+    finishOAuthRedirect()
+    return { ok: false, message: params.get('error_description') ?? oauthError }
   }
 
   const code = params.get('code')
   if (!code) return { ok: true }
 
   if (sessionStorage.getItem(STORAGE_KEYS.oauthProcessedCode) === code) {
-    window.history.replaceState({}, '', '/')
-    return isHealthConnected() ? { ok: true } : { ok: false, message: '認可コードの処理に失敗しました' }
+    finishOAuthRedirect()
+    return isHealthConnected()
+      ? { ok: true }
+      : { ok: false, message: '認可コードの処理に失敗しました' }
   }
 
   const verifier = sessionStorage.getItem(STORAGE_KEYS.pkceVerifier)
   if (!verifier) {
-    window.history.replaceState({}, '', '/')
+    finishOAuthRedirect()
     return { ok: false, message: '認可セッションが切れました。もう一度連携してください' }
   }
 
@@ -152,7 +160,7 @@ export const handleOAuthCallback = async (): Promise<OAuthCallbackResult> => {
   )
 
   sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier)
-  window.history.replaceState({}, '', '/')
+  finishOAuthRedirect()
 
   if (!result.ok) {
     sessionStorage.removeItem(STORAGE_KEYS.oauthProcessedCode)
@@ -185,12 +193,11 @@ export const resolveAccessToken = async (): Promise<string | null> => {
 }
 
 export const healthFetch = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const base = 'https://health.googleapis.com/v4'
   const token = await resolveAccessToken()
   if (!token) throw new Error('Google Health not authenticated')
 
   const request = (accessToken: string) =>
-    fetch(`${base}${path}`, {
+    fetch(`https://health.googleapis.com/v4${path}`, {
       ...init,
       headers: { Authorization: `Bearer ${accessToken}`, ...(init?.headers ?? {}) },
     })
