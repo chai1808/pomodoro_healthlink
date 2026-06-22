@@ -4,9 +4,7 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 const REDIRECT_URI =
   import.meta.env.VITE_GOOGLE_REDIRECT_URI ?? `${window.location.origin}/`
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
-const TOKEN_URL = import.meta.env.DEV
-  ? '/api/google/token'
-  : 'https://oauth2.googleapis.com/token'
+const TOKEN_URL = '/api/google/token'
 const SCOPES = [
   'https://www.googleapis.com/auth/googlehealth.sleep.readonly',
   'https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly',
@@ -82,9 +80,7 @@ const exchangeToken = async (body: URLSearchParams): Promise<boolean> => {
   })
 
   if (!response.ok) {
-    if (import.meta.env.DEV) {
-      console.warn('[google-health] token failed:', response.status, await response.text())
-    }
+    console.warn('[google-health] token failed:', response.status, await response.text())
     return false
   }
 
@@ -97,11 +93,23 @@ const exchangeToken = async (body: URLSearchParams): Promise<boolean> => {
 }
 
 export const handleOAuthCallback = async (): Promise<boolean> => {
-  const code = new URLSearchParams(window.location.search).get('code')
+  const params = new URLSearchParams(window.location.search)
+  const oauthError = params.get('error')
+  if (oauthError) {
+    console.warn('[google-health] oauth error:', oauthError, params.get('error_description'))
+    window.history.replaceState({}, '', '/')
+    return false
+  }
+
+  const code = params.get('code')
   if (!code) return false
 
   const verifier = sessionStorage.getItem(STORAGE_KEYS.pkceVerifier)
-  if (!verifier) return false
+  if (!verifier) {
+    console.warn('[google-health] pkce verifier missing')
+    window.history.replaceState({}, '', '/')
+    return false
+  }
 
   const success = await exchangeToken(
     new URLSearchParams({
@@ -113,11 +121,9 @@ export const handleOAuthCallback = async (): Promise<boolean> => {
     }),
   )
 
-  if (!success) return false
-
   sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier)
   window.history.replaceState({}, '', '/')
-  return true
+  return success
 }
 
 const refreshAccessToken = (): Promise<boolean> => {

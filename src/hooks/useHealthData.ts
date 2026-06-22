@@ -36,13 +36,18 @@ export const useHealthData = () => {
     }))
 
     try {
-      await handleOAuthCallback()
+      const hadOAuthCode = new URLSearchParams(window.location.search).has('code')
+      const oauthOk = await handleOAuthCallback()
 
       const location = await resolveUserLocation()
       const [health, weather] = await Promise.all([
         fetchHealthData(),
         fetchWeather(location),
       ])
+
+      if (hadOAuthCode && !oauthOk) {
+        throw new Error('Google 連携に失敗しました。もう一度お試しください')
+      }
 
       setState({
         snapshot: buildHealthSnapshot(health.sleepRecords, health.activity, weather),
