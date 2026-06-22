@@ -149,12 +149,15 @@ const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
 
   if (past6Days.length < 6) return null
 
-  const past6Average =
-    past6Days.reduce((sum, day) => sum + day.steps, 0) / past6Days.length
+  const sortedBySteps = [...past6Days].sort((left, right) => left.steps - right.steps)
+  const trimmedDays = sortedBySteps.slice(1, -1)
 
-  if (past6Average === 0) return null
+  const trimmedAverage =
+    trimmedDays.reduce((sum, day) => sum + day.steps, 0) / trimmedDays.length
 
-  return Math.round((yesterday.steps / past6Average) * 100) / 100
+  if (trimmedAverage === 0) return null
+
+  return Math.round((yesterday.steps / trimmedAverage) * 100) / 100
 }
 
 const evaluateHealthStatus = (
