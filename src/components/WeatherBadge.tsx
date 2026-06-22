@@ -200,7 +200,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
             />
           </svg>
 
-          <div className="relative mt-1 h-3 text-[9px] text-mono-muted">
+          <div className="relative mt-1 h-3 text-[12px] text-mono-muted">
             {daySegments.map((segment) => {
               const left =
                 (segment.start / Math.max(points.length - 1, 1)) * 100
@@ -211,7 +211,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
               return (
                 <span
                   key={`${segment.start}-${segment.end}`}
-                  className="absolute truncate text-center"
+                  className="absolute truncate text-mono-text text-center"
                   style={{
                     left: `${left}%`,
                     width: `${width}%`,
