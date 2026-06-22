@@ -153,15 +153,15 @@ const calcYesterdayStepRatio = (activity: ActivityData): number | null => {
   const yesterdaySteps = stepByDate.get(yesterdayKey)
   if (yesterdaySteps === undefined) return null
 
-  const past6Days: Array<{ date: string; steps: number }> = []
+  const past7Days: Array<{ date: string; steps: number }> = []
   for (let offset = 2; offset <= 8; offset += 1) {
     const key = isoDate(addDays(today, -offset))
-    past6Days.push({ date: key, steps: stepByDate.get(key) ?? 0 })
+    past7Days.push({ date: key, steps: stepByDate.get(key) ?? 0 })
   }
 
-  if (past6Days.length < 6) return null
+  if (past7Days.length < 7) return null
 
-  const sortedBySteps = [...past6Days].sort((left, right) => left.steps - right.steps)
+  const sortedBySteps = [...past7Days].sort((left, right) => left.steps - right.steps)
   const trimmedDays = sortedBySteps.slice(1, -1)
 
   const trimmedAverage =

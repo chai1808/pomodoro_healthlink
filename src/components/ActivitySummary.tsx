@@ -7,7 +7,7 @@ type ActivitySummaryProps = {
   healthConnected: boolean
 }
 
-const DISPLAY_DAYS = 7
+const DISPLAY_DAYS = 8
 
 const isValidStepDay = (day: ActivityData['dailySteps'][number]): boolean =>
   /^\d{4}-\d{2}-\d{2}$/.test(day.date) && day.steps >= 0
