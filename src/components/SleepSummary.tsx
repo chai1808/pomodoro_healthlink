@@ -1,10 +1,10 @@
-import { HealthSetupNotice } from './HealthSetupNotice'
 import type { SleepRecord } from '../types'
 
 type SleepSummaryProps = {
   records: SleepRecord[]
   avgSleepHours: number
   healthConfigured: boolean
+  healthConnected: boolean
 }
 
 const formatDuration = (minutes: number): string => {
@@ -17,22 +17,9 @@ export const SleepSummary = ({
   records,
   avgSleepHours,
   healthConfigured,
+  healthConnected,
 }: SleepSummaryProps) => {
-  if (!healthConfigured) {
-    return (
-      <section
-        className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3"
-        aria-label="睡眠データ"
-      >
-        <h2 className="mb-2 text-xs tracking-widest text-mono-muted uppercase">
-          Sleep
-        </h2>
-        <HealthSetupNotice />
-      </section>
-    )
-  }
-
-  if (records.length === 0) return null
+  if (!healthConfigured || !healthConnected || records.length === 0) return null
 
   return (
     <section

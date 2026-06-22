@@ -25,12 +25,14 @@ export type HealthSleepPoint = {
   }
 }
 
+export type HealthStepsRollupPoint = {
+  civilStartTime?: CivilDateTime
+  civilEndTime?: CivilDateTime
+  steps?: { countSum?: string }
+}
+
 export type HealthStepsRollup = {
-  rollupDataPoints?: Array<{
-    civilStartTime?: CivilDateTime
-    civilEndTime?: CivilDateTime
-    steps?: { countSum?: string }
-  }>
+  rollupDataPoints?: HealthStepsRollupPoint[]
 }
 
 export type HealthStepsInterval = {

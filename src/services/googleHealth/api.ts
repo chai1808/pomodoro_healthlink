@@ -5,16 +5,22 @@ import {
   formatCivilTime,
   isoDate,
   isoDateFromTimestamp,
-  toCivilDateTimeEnd,
   toCivilDateTimeStart,
 } from './format'
-import type { HealthSleepPoint, HealthStepsPoint, HealthStepsRollup } from './types'
+import type {
+  HealthSleepPoint,
+  HealthStepsPoint,
+  HealthStepsRollup,
+  HealthStepsRollupPoint,
+} from './types'
 
 const EMPTY_ACTIVITY: ActivityData = {
   currentWeekSteps: [],
   last4WeeksSteps: [],
   dailySteps: [],
 }
+
+const ACTIVITY_RANGE_DAYS = 27
 
 const parseSleepRecord = (item: HealthSleepPoint): SleepRecord | null => {
   const interval = item.sleep?.interval
@@ -71,16 +77,22 @@ const buildActivityData = (dailySteps: DailySteps[]): ActivityData => ({
   dailySteps,
 })
 
-const parseRollupSteps = (data: HealthStepsRollup): DailySteps[] =>
-  (data.rollupDataPoints ?? [])
-    .map((point) => ({
-      date:
-        formatCivilDate(point.civilStartTime) ||
-        formatCivilDate(point.civilEndTime) ||
-        '',
-      steps: parseInt(point.steps?.countSum ?? '0', 10),
-    }))
-    .filter((day) => day.date)
+const parseRollupPoint = (point: HealthStepsRollupPoint): DailySteps | null => {
+  const date =
+    formatCivilDate(point.civilEndTime) || formatCivilDate(point.civilStartTime)
+  if (!date) return null
+
+  const steps = parseInt(point.steps?.countSum ?? '0', 10)
+  if (Number.isNaN(steps) || steps < 0) return null
+
+  return { date, steps }
+}
+
+const parseRollupSteps = (raw: HealthStepsRollupPoint[]): DailySteps[] =>
+  raw
+    .map(parseRollupPoint)
+    .filter((day): day is DailySteps => day !== null)
+    .sort((left, right) => left.date.localeCompare(right.date))
 
 const parseStepsListPoint = (
   item: HealthStepsPoint,
@@ -96,7 +108,7 @@ const parseStepsListPoint = (
   if (!date) return null
 
   const steps = parseInt(item.steps?.count ?? item.steps?.countSum ?? '0', 10)
-  if (steps < 0) return null
+  if (steps < 0 || Number.isNaN(steps)) return null
 
   return { date, steps }
 }
@@ -115,36 +127,60 @@ const aggregateStepsByDate = (
     .map(([date, steps]) => ({ date, steps }))
 }
 
-const fetchActivityViaDailyRollUp = async (
-  start: Date,
-  end: Date,
-): Promise<ActivityData> => {
+const buildActivityRange = () => {
+  const rangeStart = new Date()
+  rangeStart.setDate(rangeStart.getDate() - ACTIVITY_RANGE_DAYS)
+  const rangeEndExclusive = new Date()
+  rangeEndExclusive.setDate(rangeEndExclusive.getDate() + 1)
+
+  return {
+    rangeStart,
+    rangeEndExclusive,
+    requestBody: {
+      range: {
+        start: toCivilDateTimeStart(rangeStart),
+        end: toCivilDateTimeStart(rangeEndExclusive),
+      },
+      windowSizeDays: 1,
+    },
+  }
+}
+
+const fetchActivityViaDailyRollUp = async (): Promise<{
+  raw: HealthStepsRollupPoint[]
+  activity: ActivityData
+}> => {
+  const { requestBody } = buildActivityRange()
+
+  console.log('[google-health] steps dailyRollUp range:', requestBody.range)
+
   const data = await healthFetch<HealthStepsRollup>(
     '/users/me/dataTypes/steps/dataPoints:dailyRollUp',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        range: {
-          start: toCivilDateTimeStart(start),
-          end: toCivilDateTimeEnd(end),
-        },
-        windowSizeDays: 1,
-      }),
+      body: JSON.stringify(requestBody),
     },
   )
 
-  console.log('[google-health] steps dailyRollUp response:', data.rollupDataPoints ?? [])
+  const raw = data.rollupDataPoints ?? []
+  console.log('[google-health] steps dailyRollUp response:', raw)
 
-  return buildActivityData(parseRollupSteps(data))
+  const dailySteps = parseRollupSteps(raw)
+  console.log('[google-health] steps parsed:', dailySteps)
+
+  if (raw.length > 0 && dailySteps.length === 0) {
+    console.warn('[google-health] steps dailyRollUp raw data exists but parse failed')
+  }
+
+  return { raw, activity: buildActivityData(dailySteps) }
 }
 
-const fetchActivityViaList = async (start: Date, end: Date): Promise<ActivityData> => {
-  const rangeEnd = new Date(end)
-  rangeEnd.setDate(rangeEnd.getDate() + 1)
+const fetchActivityViaList = async (): Promise<ActivityData> => {
+  const { rangeStart, rangeEndExclusive } = buildActivityRange()
 
   const filter = encodeURIComponent(
-    `steps.interval.civil_start_time >= "${isoDate(start)}" AND steps.interval.civil_start_time < "${isoDate(rangeEnd)}"`,
+    `steps.interval.civil_start_time >= "${isoDate(rangeStart)}" AND steps.interval.civil_start_time < "${isoDate(rangeEndExclusive)}"`,
   )
 
   const data = await healthFetch<{ dataPoints?: HealthStepsPoint[] }>(
@@ -158,23 +194,19 @@ const fetchActivityViaList = async (start: Date, end: Date): Promise<ActivityDat
     .filter((point): point is { date: string; steps: number } => point !== null)
 
   const dailySteps = aggregateStepsByDate(points)
-  console.log('[google-health] steps parsed:', dailySteps)
+  console.log('[google-health] steps list parsed:', dailySteps)
 
   return buildActivityData(dailySteps)
 }
 
 const fetchActivityData = async (): Promise<ActivityData> => {
-  const end = new Date()
-  const start = new Date()
-  start.setDate(start.getDate() - 27)
+  const { raw, activity } = await fetchActivityViaDailyRollUp()
+  if (activity.dailySteps.length > 0) return activity
 
-  const rollup = await fetchActivityViaDailyRollUp(start, end)
-  if (rollup.dailySteps.length > 0) return rollup
+  if (raw.length > 0) return EMPTY_ACTIVITY
 
-  const listed = await fetchActivityViaList(start, end)
-  if (listed.dailySteps.length > 0) return listed
-
-  return EMPTY_ACTIVITY
+  const listed = await fetchActivityViaList()
+  return listed.dailySteps.length > 0 ? listed : EMPTY_ACTIVITY
 }
 
 export const fetchHealthData = async (): Promise<{

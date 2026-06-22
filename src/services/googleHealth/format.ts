@@ -2,7 +2,8 @@ import type { CivilDateTime } from './types'
 
 export const formatCivilDate = (civil?: CivilDateTime): string => {
   if (!civil?.date) return ''
-  const { year = 0, month = 0, day = 0 } = civil.date
+  const { year, month, day } = civil.date
+  if (!year || !month || !day) return ''
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 

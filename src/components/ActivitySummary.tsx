@@ -1,12 +1,15 @@
-import { HealthSetupNotice } from './HealthSetupNotice'
 import type { ActivityData } from '../types'
 
 type ActivitySummaryProps = {
   activity: ActivityData
   healthConfigured: boolean
+  healthConnected: boolean
 }
 
 const DISPLAY_DAYS = 6
+
+const isValidStepDay = (day: ActivityData['dailySteps'][number]): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(day.date) && day.steps >= 0
 
 const calcAvgSteps = (steps: ActivityData['dailySteps']): number => {
   if (steps.length === 0) return 0
@@ -17,22 +20,11 @@ const calcAvgSteps = (steps: ActivityData['dailySteps']): number => {
 export const ActivitySummary = ({
   activity,
   healthConfigured,
+  healthConnected,
 }: ActivitySummaryProps) => {
-  if (!healthConfigured) {
-    return (
-      <section
-        className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3"
-        aria-label="活動量"
-      >
-        <h2 className="mb-2 text-xs tracking-widest text-mono-muted uppercase">
-          Activity
-        </h2>
-        <HealthSetupNotice />
-      </section>
-    )
-  }
+  if (!healthConfigured || !healthConnected) return null
 
-  const steps = activity.dailySteps.filter((day) => day.date).slice(-DISPLAY_DAYS)
+  const steps = activity.dailySteps.filter(isValidStepDay).slice(-DISPLAY_DAYS)
 
   if (steps.length === 0) return null
 
