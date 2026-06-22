@@ -1,9 +1,7 @@
 import { STORAGE_KEYS } from '../../lib/constants'
+import { getHealthConfig, isHealthConfigured, loadHealthConfig } from './config'
 import type { OAuthCallbackResult } from './types'
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
-const REDIRECT_URI =
-  import.meta.env.VITE_GOOGLE_REDIRECT_URI ?? `${window.location.origin}/`
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const TOKEN_URL = '/api/google/token'
 const SCOPES = [
@@ -24,7 +22,7 @@ const storeTokens = (accessToken: string, refreshToken?: string): void => {
   }
 }
 
-export const isHealthConfigured = (): boolean => Boolean(CLIENT_ID)
+export { isHealthConfigured, loadHealthConfig }
 
 export const isHealthConnected = (): boolean =>
   Boolean(getAccessToken() || getRefreshToken())
@@ -57,7 +55,8 @@ const createPkce = async (): Promise<{ verifier: string; challenge: string }> =>
 }
 
 export const startHealthAuth = async (): Promise<void> => {
-  if (!CLIENT_ID) return
+  const { clientId, redirectUri } = await loadHealthConfig()
+  if (!clientId) return
 
   const { verifier, challenge } = await createPkce()
   sessionStorage.setItem(STORAGE_KEYS.pkceVerifier, verifier)
@@ -65,8 +64,8 @@ export const startHealthAuth = async (): Promise<void> => {
 
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    client_id: clientId,
+    redirect_uri: redirectUri,
     scope: SCOPES.join(' '),
     code_challenge: challenge,
     code_challenge_method: 'S256',
@@ -122,6 +121,7 @@ const exchangeToken = async (
 }
 
 export const handleOAuthCallback = async (): Promise<OAuthCallbackResult> => {
+  const { clientId, redirectUri } = await loadHealthConfig()
   const params = new URLSearchParams(window.location.search)
   const oauthError = params.get('error')
 
@@ -150,10 +150,10 @@ export const handleOAuthCallback = async (): Promise<OAuthCallbackResult> => {
 
   const result = await exchangeToken(
     new URLSearchParams({
-      client_id: CLIENT_ID,
+      client_id: clientId,
       grant_type: 'authorization_code',
       code,
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: redirectUri,
       code_verifier: verifier,
     }),
   )
@@ -173,9 +173,10 @@ const refreshAccessToken = async (): Promise<boolean> => {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return false
 
+  const { clientId } = getHealthConfig()
   const result = await exchangeToken(
     new URLSearchParams({
-      client_id: CLIENT_ID,
+      client_id: clientId,
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
     }),

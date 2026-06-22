@@ -206,6 +206,7 @@ export {
   handleOAuthCallback,
   isHealthConfigured,
   isHealthConnected,
+  loadHealthConfig,
   startHealthAuth,
 } from './auth'
 

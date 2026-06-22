@@ -7,6 +7,7 @@ import {
   handleOAuthCallback,
   isHealthConfigured,
   isHealthConnected,
+  loadHealthConfig,
 } from '../services/googleHealth/api'
 import { fetchWeather } from '../services/weather/api'
 import type { HealthSnapshot } from '../types'
@@ -24,7 +25,7 @@ export const useHealthData = () => {
     snapshot: null,
     loading: true,
     error: null,
-    healthConfigured: isHealthConfigured(),
+    healthConfigured: false,
     healthConnected: isHealthConnected(),
   })
 
@@ -36,6 +37,7 @@ export const useHealthData = () => {
     }))
 
     try {
+      await loadHealthConfig()
       const oauth = await handleOAuthCallback()
       if (!oauth.ok) {
         throw new Error(`Google 連携に失敗しました: ${oauth.message}`)

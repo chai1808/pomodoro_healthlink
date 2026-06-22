@@ -70,9 +70,17 @@ npm run dev
 
 | 変数 | 必須 | 説明 |
 |------|------|------|
-| `VITE_GOOGLE_CLIENT_ID` | 連携時 | OAuth クライアント ID |
-| `VITE_GOOGLE_REDIRECT_URI` | 連携時 | OAuth コールバック URL |
+| `VITE_GOOGLE_CLIENT_ID` または `GOOGLE_CLIENT_ID` | 連携時 | OAuth クライアント ID |
+| `VITE_GOOGLE_REDIRECT_URI` または `GOOGLE_REDIRECT_URI` | 連携時 | OAuth コールバック URL（例: `https://<your-domain>/auth/google/callback`） |
 | `GOOGLE_CLIENT_SECRET` | 連携時 | サーバー側のみ（Vercel / `.env`） |
+
+**Vercel でプロジェクトを作り直した場合**
+
+1. 上記3つを **Production** 環境に設定する
+2. Google Cloud Console の「承認済みリダイレクト URI」が Vercel の URL と一致しているか確認する
+3. 環境変数を保存したあと **Redeploy（再デプロイ）** する
+
+`VITE_*` はビルド時に埋め込まれます。`GOOGLE_*` は `/api/config` から実行時に読み込むため、再デプロイ後すぐに Fitbit 連携ボタンが有効になります。
 
 未連携時も天気・気圧連動タイマーは動作しますが、睡眠・歩数に基づく体調判定は **データ取得中** となります。
 
