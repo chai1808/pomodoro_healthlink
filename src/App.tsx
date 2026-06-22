@@ -117,7 +117,6 @@ const AppContent = ({
                   <WeatherBadge weather={snapshot.weather} />
                   <SleepSummary
                     records={snapshot.sleepRecords}
-                    avgSleepHours={snapshot.avgSleepHours}
                     healthConfigured={healthConfigured}
                     healthConnected={healthConnected}
                   />

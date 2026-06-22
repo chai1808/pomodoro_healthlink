@@ -116,15 +116,32 @@ export const getForecastMaxDropText = (
   return `急降下なし（${value}）`
 }
 
-const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
-  const recent = records.slice(0, 3)
-  if (recent.length === 0) return null
+const SLEEP_BASELINE_DAYS = 7
 
-  const totalHours = recent.reduce(
-    (sum, record) => sum + record.minutesAsleep / 60,
-    0,
-  )
-  return totalHours / recent.length
+const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
+  const sleepByDate = new Map<string, number>()
+
+  for (const record of records) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(record.date)) continue
+    sleepByDate.set(record.date, record.minutesAsleep / 60)
+  }
+
+  const today = startOfDay()
+  const past7Days: number[] = []
+
+  for (let offset = 1; offset <= SLEEP_BASELINE_DAYS; offset += 1) {
+    const key = isoDate(addDays(today, -offset))
+    const hours = sleepByDate.get(key)
+    if (hours === undefined) return null
+    past7Days.push(hours)
+  }
+
+  const sortedByHours = [...past7Days].sort((left, right) => left - right)
+  const trimmedDays = sortedByHours.slice(1, -1)
+  const trimmedAverage =
+    trimmedDays.reduce((sum, hours) => sum + hours, 0) / trimmedDays.length
+
+  return trimmedAverage
 }
 
 const isoDate = (date: Date): string => {

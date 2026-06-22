@@ -1,11 +1,16 @@
 import type { SleepRecord } from '../types'
+import { isoDate } from '../services/googleHealth/format'
 
 type SleepSummaryProps = {
   records: SleepRecord[]
-  avgSleepHours: number
   healthConfigured: boolean
   healthConnected: boolean
 }
+
+const DISPLAY_DAYS = 7
+
+const isValidSleepRecord = (record: SleepRecord): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(record.date) && record.minutesAsleep > 0
 
 const formatDuration = (minutes: number): string => {
   const h = Math.floor(minutes / 60)
@@ -13,13 +18,33 @@ const formatDuration = (minutes: number): string => {
   return `${h}時間${m > 0 ? `${m}分` : ''}`
 }
 
+const calcAvgSleepHours = (records: SleepRecord[]): number => {
+  if (records.length === 0) return 0
+  const totalHours = records.reduce(
+    (sum, record) => sum + record.minutesAsleep / 60,
+    0,
+  )
+  return totalHours / records.length
+}
+
 export const SleepSummary = ({
   records,
-  avgSleepHours,
   healthConfigured,
   healthConnected,
 }: SleepSummaryProps) => {
-  if (!healthConfigured || !healthConnected || records.length === 0) return null
+  if (!healthConfigured || !healthConnected) return null
+
+  const today = isoDate(new Date())
+
+  const sleepRecords = [...records]
+    .filter(isValidSleepRecord)
+    .filter((record) => record.date <= today)
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, DISPLAY_DAYS)
+
+  if (sleepRecords.length === 0) return null
+
+  const avgSleepHours = calcAvgSleepHours(sleepRecords)
 
   return (
     <section
@@ -32,22 +57,23 @@ export const SleepSummary = ({
         </h2>
         <p className="text-sm text-mono-muted">
           平均{' '}
-          <span className="font-mono text-mono-text">{avgSleepHours.toFixed(1)}</span>
+          <span className="font-mono text-mono-text">
+            {avgSleepHours.toFixed(1)}
+          </span>
           <span className="text-mono-muted"> h</span>
         </p>
       </div>
 
-      <ul className="space-y-2">
-        {records.slice(0, 3).map((record) => (
+      <ul className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-9">
+        {sleepRecords.map((record, index) => (
           <li
             key={record.date}
-            className="grid grid-cols-[auto_1fr_auto] gap-x-3 gap-y-0.5 border-t border-mono-border/50 pt-2 text-xs first:border-t-0 first:pt-0"
+            className={`flex items-baseline justify-between py-2 text-xs ${
+              index > 0 ? 'border-t border-mono-border/50' : ''
+            } ${index >= 2 ? 'sm:border-t' : 'sm:border-t-0'}`}
           >
             <span className="font-mono text-mono-text">{record.date}</span>
-            <span className="text-mono-muted">
-              {record.sleepStart} → {record.wakeTime}
-            </span>
-            <span className="font-mono text-right text-mono-text">
+            <span className="font-mono text-mono-text">
               {formatDuration(record.minutesAsleep)}
             </span>
           </li>

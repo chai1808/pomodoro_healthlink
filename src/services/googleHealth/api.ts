@@ -21,8 +21,22 @@ const EMPTY_ACTIVITY: ActivityData = {
 }
 
 const SLEEP_LOOKBACK_DAYS = 14
-const SLEEP_RECORD_LIMIT = 3
 const ACTIVITY_RANGE_DAYS = 27
+
+const dedupeSleepRecordsByDate = (records: SleepRecord[]): SleepRecord[] => {
+  const byDate = new Map<string, SleepRecord>()
+
+  for (const record of records) {
+    const existing = byDate.get(record.date)
+    if (!existing || record.minutesAsleep > existing.minutesAsleep) {
+      byDate.set(record.date, record)
+    }
+  }
+
+  return [...byDate.values()].sort((left, right) =>
+    right.date.localeCompare(left.date),
+  )
+}
 
 const parseSleepRecord = (item: HealthSleepPoint): SleepRecord | null => {
   const interval = item.sleep?.interval
@@ -60,11 +74,11 @@ const fetchSleepRecords = async (): Promise<SleepRecord[]> => {
     `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=50&filter=${filter}`,
   )
 
-  return (data.dataPoints ?? [])
-    .map(parseSleepRecord)
-    .filter((record): record is SleepRecord => record !== null)
-    .sort((left, right) => right.date.localeCompare(left.date))
-    .slice(0, SLEEP_RECORD_LIMIT)
+  return dedupeSleepRecordsByDate(
+    (data.dataPoints ?? [])
+      .map(parseSleepRecord)
+      .filter((record): record is SleepRecord => record !== null),
+  )
 }
 
 const buildActivityData = (dailySteps: DailySteps[]): ActivityData => ({
