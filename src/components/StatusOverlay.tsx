@@ -11,17 +11,17 @@ const STATUS_COPY: Record<
 > = {
   sleep_day: {
     title: '睡眠日',
-    subtitle: '直近3日の平均睡眠が7時間以下のため、本日は休息を優先してください',
+    subtitle: '直近3日の平均睡眠が7時間以下のため、<br>本日は休息を優先してください',
   },
   activity_day: {
     title: '運動日',
     subtitle:
-      '昨日の歩数が過去6日間の平均の70%より下のため、本日は運動を優先してください',
+      '昨日の歩数が過去6日間の平均の70%より下のため、<br>本日は運動を優先してください',
   },
   data_unavailable: {
     title: 'データ取得中',
     subtitle:
-      'Google Health から睡眠・歩数を取得できませんでした。Fitbit アプリで同期後、再読み込みしてください',
+      'Google Health から睡眠・歩数を取得できませんでした。<br>Fitbit アプリで同期後、再読み込みしてください',
   },
 }
 
@@ -32,7 +32,7 @@ export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
 
   return (
     <div
-      className="absolute inset-0 z-20 flex items-center justify-center bg-mono-bg/85 backdrop-blur-sm"
+      className="absolute inset-0 px-4 z-20 flex items-center justify-center bg-mono-bg/85 backdrop-blur-sm"
       role="alert"
       aria-live="assertive"
     >
@@ -40,7 +40,7 @@ export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
         <p className="text-3xl font-light tracking-widest text-mono-muted font-bold sm:text-4xl">
           {copy.title}
         </p>
-        <p className="mt-4 text-sm text-mono-muted/70">{copy.subtitle}</p>
+        <p className="mt-4 text-sm text-mono-muted/70 sm:text-right">{copy.subtitle}</p>
       </div>
     </div>
   )
