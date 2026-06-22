@@ -58,17 +58,10 @@ const fetchSleepRecords = async (): Promise<SleepRecord[]> => {
     `/users/me/dataTypes/sleep/dataPoints:reconcile?pageSize=25&filter=${filter}`,
   )
 
-  const raw = data.dataPoints ?? []
-  console.log('[google-health] sleep response:', raw)
-
-  const records = raw
+  return (data.dataPoints ?? [])
     .map(parseSleepRecord)
     .filter((record): record is SleepRecord => record !== null)
     .slice(0, 3)
-
-  console.log('[google-health] sleep parsed:', records)
-
-  return records
 }
 
 const buildActivityData = (dailySteps: DailySteps[]): ActivityData => ({
@@ -152,8 +145,6 @@ const fetchActivityViaDailyRollUp = async (): Promise<{
 }> => {
   const { requestBody } = buildActivityRange()
 
-  console.log('[google-health] steps dailyRollUp range:', requestBody.range)
-
   const data = await healthFetch<HealthStepsRollup>(
     '/users/me/dataTypes/steps/dataPoints:dailyRollUp',
     {
@@ -164,16 +155,7 @@ const fetchActivityViaDailyRollUp = async (): Promise<{
   )
 
   const raw = data.rollupDataPoints ?? []
-  console.log('[google-health] steps dailyRollUp response:', raw)
-
-  const dailySteps = parseRollupSteps(raw)
-  console.log('[google-health] steps parsed:', dailySteps)
-
-  if (raw.length > 0 && dailySteps.length === 0) {
-    console.warn('[google-health] steps dailyRollUp raw data exists but parse failed')
-  }
-
-  return { raw, activity: buildActivityData(dailySteps) }
+  return { raw, activity: buildActivityData(parseRollupSteps(raw)) }
 }
 
 const fetchActivityViaList = async (): Promise<ActivityData> => {
@@ -187,22 +169,16 @@ const fetchActivityViaList = async (): Promise<ActivityData> => {
     `/users/me/dataTypes/steps/dataPoints?pageSize=100&filter=${filter}`,
   )
 
-  console.log('[google-health] steps list response:', data.dataPoints ?? [])
-
   const points = (data.dataPoints ?? [])
     .map(parseStepsListPoint)
     .filter((point): point is { date: string; steps: number } => point !== null)
 
-  const dailySteps = aggregateStepsByDate(points)
-  console.log('[google-health] steps list parsed:', dailySteps)
-
-  return buildActivityData(dailySteps)
+  return buildActivityData(aggregateStepsByDate(points))
 }
 
 const fetchActivityData = async (): Promise<ActivityData> => {
   const { raw, activity } = await fetchActivityViaDailyRollUp()
   if (activity.dailySteps.length > 0) return activity
-
   if (raw.length > 0) return EMPTY_ACTIVITY
 
   const listed = await fetchActivityViaList()
@@ -218,14 +194,8 @@ export const fetchHealthData = async (): Promise<{
   }
 
   const [sleepRecords, activity] = await Promise.all([
-    fetchSleepRecords().catch((err) => {
-      console.warn('[google-health] sleep fetch failed:', err)
-      return [] as SleepRecord[]
-    }),
-    fetchActivityData().catch((err) => {
-      console.warn('[google-health] activity fetch failed:', err)
-      return EMPTY_ACTIVITY
-    }),
+    fetchSleepRecords().catch(() => [] as SleepRecord[]),
+    fetchActivityData().catch(() => EMPTY_ACTIVITY),
   ])
 
   return { sleepRecords, activity }

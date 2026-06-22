@@ -41,24 +41,6 @@ const filterPointsForDay = (
     .sort((a, b) => a.timestamp - b.timestamp)
 }
 
-const filterPointsForDayRange = (
-  points: PressurePoint[],
-  startDayOffset: number,
-  dayCount: number,
-): PressurePoint[] => {
-  const start = startOfDay()
-  start.setDate(start.getDate() + startDayOffset)
-  const end = new Date(start)
-  end.setDate(end.getDate() + dayCount)
-
-  return points
-    .filter(
-      (point) =>
-        point.timestamp >= start.getTime() && point.timestamp < end.getTime(),
-    )
-    .sort((a, b) => a.timestamp - b.timestamp)
-}
-
 const calcMaxDropInWindow = (
   points: PressurePoint[],
   windowMs: number,
@@ -89,26 +71,16 @@ export const calcTodayPressureRange = (points: PressurePoint[]): number => {
 export const calcForecastMaxDrop = (
   points: PressurePoint[],
   futureDays = 2,
-): number =>
-  calcMaxDropInWindow(
-    filterPointsForDayRange(points, 1, futureDays),
-    SIX_HOURS_MS,
-  )
-
-export const calcForecastDayPressureDrops = (
-  points: PressurePoint[],
-  futureDays = 2,
-): Array<{ dayOffset: number; maxDrop: number }> =>
-  Array.from({ length: futureDays }, (_, index) => {
-    const dayOffset = index + 1
-    return {
-      dayOffset,
-      maxDrop: calcMaxDropInWindow(
-        filterPointsForDay(points, dayOffset),
-        SIX_HOURS_MS,
-      ),
-    }
-  })
+): number => {
+  let maxDrop = 0
+  for (let dayOffset = 1; dayOffset <= futureDays; dayOffset++) {
+    maxDrop = Math.max(
+      maxDrop,
+      calcMaxDropInWindow(filterPointsForDay(points, dayOffset), SIX_HOURS_MS),
+    )
+  }
+  return maxDrop
+}
 
 export const getTodayPressureRangeText = (
   pressureRange: number,
@@ -119,10 +91,10 @@ export const getTodayPressureRangeText = (
   }
 
   const value = `${pressureRange.toFixed(1)} hPa`
-  if (pressureRange > PRESSURE_RANGE_THRESHOLD) {
-    return `変動幅あり（${value}）`
+  if (pressureRange >= PRESSURE_RANGE_THRESHOLD) {
+    return `変動幅 ${value}（4.0 hPa 以上）`
   }
-  return `変動幅は小さい（${value}）`
+  return `変動幅 ${value}（4.0 hPa 未満）`
 }
 
 export const getForecastMaxDropText = (
@@ -155,57 +127,60 @@ const calcAvgSleepHours = (records: SleepRecord[]): number | null => {
   return totalHours / recent.length
 }
 
-const calcActivityScore = (activity: ActivityData): number | null => {
+const calcWeeklyVsMonthlyStepRatio = (activity: ActivityData): number | null => {
   const { currentWeekSteps, last4WeeksSteps } = activity
 
   if (currentWeekSteps.length === 0 || last4WeeksSteps.length === 0) {
     return null
   }
 
-  const currentWeekAverage =
-    currentWeekSteps.reduce((a, b) => a + b, 0) / currentWeekSteps.length
+  const weekAverage =
+    currentWeekSteps.reduce((sum, steps) => sum + steps, 0) / currentWeekSteps.length
 
-  const baselineAverage =
-    last4WeeksSteps.reduce((a, b) => a + b, 0) / last4WeeksSteps.length
+  const monthAverage =
+    last4WeeksSteps.reduce((sum, steps) => sum + steps, 0) / last4WeeksSteps.length
 
-  if (baselineAverage === 0) return null
+  if (monthAverage === 0) return null
 
-  return Math.round((currentWeekAverage / baselineAverage) * 100) / 100
+  return Math.round((weekAverage / monthAverage) * 100) / 100
 }
 
 const evaluateHealthStatus = (
   avgSleepHours: number | null,
-  activityScore: number | null,
+  stepRatio: number | null,
 ): HealthStatus => {
-  if (avgSleepHours === null || activityScore === null) {
+  if (avgSleepHours === null || stepRatio === null) {
     return 'data_unavailable'
   }
 
-  const sleepHours = avgSleepHours ?? 0
-  const score = activityScore ?? 0
+  if (avgSleepHours >= MIN_HEALTHY_SLEEP_HOURS && stepRatio >= MIN_ACTIVITY_SCORE) {
+    return 'healthy'
+  }
 
-  const isHealthy =
-    sleepHours >= MIN_HEALTHY_SLEEP_HOURS && score >= MIN_ACTIVITY_SCORE
+  if (avgSleepHours < MIN_HEALTHY_SLEEP_HOURS) {
+    return 'sleep_day'
+  }
 
-  if (isHealthy) return 'healthy'
-  if (sleepHours < MIN_HEALTHY_SLEEP_HOURS) return 'sleep_day'
   return 'activity_day'
 }
 
-const selectPomodoroMode = (
-  todayPressureRange: number,
-  forecastMaxDrop: number,
-  jmaTodayWarnings: string[] = [],
-  jmaForecastWarnings: string[] = [],
-): PomodoroMode => {
-  const isStable =
-    todayPressureRange <= PRESSURE_RANGE_THRESHOLD &&
-    forecastMaxDrop < MAX_DROP_THRESHOLD &&
-    jmaTodayWarnings.length === 0 &&
-    jmaForecastWarnings.length === 0
+export const calcForecastDayPressureDrops = (
+  points: PressurePoint[],
+  futureDays = 2,
+): Array<{ dayOffset: number; maxDrop: number }> =>
+  Array.from({ length: futureDays }, (_, index) => {
+    const dayOffset = index + 1
+    return {
+      dayOffset,
+      maxDrop: calcMaxDropInWindow(
+        filterPointsForDay(points, dayOffset),
+        SIX_HOURS_MS,
+      ),
+    }
+  })
 
-  return isStable ? 'optimal' : 'reduced'
-}
+const selectPomodoroMode = (todayPressureRange: number): PomodoroMode =>
+  todayPressureRange < PRESSURE_RANGE_THRESHOLD ? 'optimal' : 'reduced'
 
 export const getPomodoroConfig = (mode: PomodoroMode): PomodoroConfig =>
   POMODORO_CONFIGS[mode]
@@ -215,30 +190,17 @@ export const buildHealthSnapshot = (
   activity: ActivityData,
   weather: WeatherInfo,
 ): HealthSnapshot => {
-  const avgSleepHours = calcAvgSleepHours(sleepRecords) ?? 0
-  const activityScore = calcActivityScore(activity)
-  const status = evaluateHealthStatus(
-    calcAvgSleepHours(sleepRecords),
-    activityScore,
-  )
-  const jmaForecastLabels = [
-    ...new Set(
-      (weather.jmaForecastDayWarnings ?? []).flatMap((day) => day.warnings),
-    ),
-  ]
+  const avgSleepHours = calcAvgSleepHours(sleepRecords)
+  const stepRatio = calcWeeklyVsMonthlyStepRatio(activity)
+  const status = evaluateHealthStatus(avgSleepHours, stepRatio)
 
   const pomodoroMode =
     status === 'healthy'
-      ? selectPomodoroMode(
-          weather.pressureRange,
-          weather.maxDrop,
-          weather.jmaTodayWarnings ?? [],
-          jmaForecastLabels,
-        )
+      ? selectPomodoroMode(weather.pressureRange)
       : 'reduced'
 
   return {
-    avgSleepHours,
+    avgSleepHours: avgSleepHours ?? 0,
     status,
     pomodoroMode,
     sleepRecords,

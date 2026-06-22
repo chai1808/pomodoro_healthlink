@@ -11,11 +11,12 @@ const STATUS_COPY: Record<
 > = {
   sleep_day: {
     title: '睡眠日',
-    subtitle: '平均睡眠7時間未満のため、本日は休息を優先してください',
+    subtitle: '直近3日の平均睡眠が7時間以下のため、本日は休息を優先してください',
   },
   activity_day: {
     title: '運動日',
-    subtitle: '活動量が基準未満のため、本日は運動を優先してください',
+    subtitle:
+      '今週の平均歩数が月の平均歩数の70%より下のため、本日は運動を優先してください',
   },
   data_unavailable: {
     title: 'データ取得中',

@@ -110,7 +110,6 @@ const exchangeToken = async (
 
   if (!response.ok) {
     const message = await parseTokenError(response)
-    console.warn('[google-health] token failed:', message)
     return { ok: false, message }
   }
 
