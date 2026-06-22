@@ -30,6 +30,7 @@ export const STORAGE_KEYS = {
   googleHealthRefreshToken: 'healthlink_google_health_refresh_token',
   oauthProcessedCode: 'healthlink_oauth_processed_code',
   dailyUsage: 'healthlink_daily_usage',
+  timerState: 'healthlink_timer_state',
   pkceVerifier: 'healthlink_pkce_verifier',
   userLocation: 'healthlink_user_location',
 } as const
