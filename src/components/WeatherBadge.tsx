@@ -170,7 +170,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
                   y1={1}
                   x2={x}
                   y2={CHART_HEIGHT}
-                  stroke="#2f2f2f"
+                  stroke="#475569"
                   strokeWidth="0.75"
                 />
               )
@@ -193,7 +193,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
             <path
               d={linePath}
               fill="none"
-              stroke="#cfcfcf"
+              stroke="#e2e8f0"
               strokeWidth="0.5"
               strokeLinejoin="round"
               strokeLinecap="round"

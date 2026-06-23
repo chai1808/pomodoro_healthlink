@@ -11,7 +11,7 @@ export const POMODORO_CONFIGS = {
     breakMinutes: 5,
     cycles: 6,
     maxSessionsPerDay: 2,
-    workBorderColor: '#2a2a2a',
+    workBorderColor: '#475569',
     breakBorderColor: '#7ecfc4',
   },
   reduced: {
@@ -20,7 +20,7 @@ export const POMODORO_CONFIGS = {
     breakMinutes: 5,
     cycles: 3,
     maxSessionsPerDay: 1,
-    workBorderColor: '#2a2a2a',
+    workBorderColor: '#475569',
     breakBorderColor: '#c4a574',
   },
 } as const
