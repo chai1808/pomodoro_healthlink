@@ -54,7 +54,7 @@ export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
       aria-live="assertive"
     >
       <div className="text-center">
-        <p className="text-3xl font-light tracking-widest text-mono-muted font-bold sm:text-4xl text-[#7ecfc4]">
+        <p className="text-3xl tracking-widest font-bold sm:text-4xl text-[#7ecfc4]">
           {copy.title}
         </p>
         <div className="mt-4 text-sm text-mono-muted/70 wrap-anywhere"><div>{copy.subtitle}</div></div>
