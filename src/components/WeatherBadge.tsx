@@ -110,7 +110,7 @@ export const WeatherBadge = ({ weather }: WeatherBadgeProps) => {
 
   return (
     <section
-      className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3 pb-6"
+      className="rounded-lg border border-mono-border bg-mono-bg px-4 py-3 pb-6"
       aria-label="天気情報"
     >
       {weather.jmaHeadline && (

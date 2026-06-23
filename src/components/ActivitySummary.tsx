@@ -39,7 +39,7 @@ export const ActivitySummary = ({
 
   return (
     <section
-      className="rounded-lg border border-mono-border bg-mono-surface px-4 py-3"
+      className="rounded-lg border border-mono-border bg-mono-bg px-4 py-3"
       aria-label="歩数"
     >
       <div className="mb-2 flex items-baseline justify-between gap-2">
