@@ -14,11 +14,7 @@ const STATUS_COPY: Record<
     title: '睡眠日',
     subtitle: (
       <>
-        今日の睡眠時間が、
-        <br />
-        直近の睡眠記録(最大8件)の平均の70%より下のため、
-        <br />
-        本日は休息を優先してください
+        今日の睡眠時間が、直近の睡眠記録(最大8件)の平均の70%より下のため、本日は休息を優先してください
       </>
     ),
   },
@@ -26,11 +22,7 @@ const STATUS_COPY: Record<
     title: '運動日',
     subtitle: (
       <>
-        昨日の歩数が、
-        <br />
-        直近7日間の上位・下位1位を除いた平均の70%より下のため、
-        <br />
-        本日は運動を優先してください
+        昨日の歩数が、直近7日間の上位・下位1位を除いた平均の70%より下のため、本日は運動を優先してください
       </>
     ),
   },
@@ -61,7 +53,7 @@ export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
         <p className="text-3xl font-light tracking-widest text-mono-muted font-bold sm:text-4xl">
           {copy.title}
         </p>
-        <p className="mt-4 text-sm text-mono-muted/70">{copy.subtitle}</p>
+        <div className="mt-4 text-sm text-left text-mono-muted/70 wrap-anywhere"><div>{copy.subtitle}</div></div>
       </div>
     </div>
   )
