@@ -31,13 +31,19 @@ const STATUS_COPY: Record<
     ),
   },
   data_unavailable: {
-    title: 'データ取得中',
+    title: 'データ未取得',
     subtitle: (
       <>
-        Google Healthから、<br />
-        睡眠・歩数を取得できませんでした。
-        <br />
-        Fitbitアプリで、同期後、再読み込みしてください
+          <div className="mb-4">
+            <p className="mb-2">このアプリでは以下の目的で<br />Googleアカウント認証を利用します。</p>
+            <ul>
+              <li>・Fitbit活動データの取得</li>
+              <li>・睡眠データの取得</li>
+              <li>・活動量データの表示</li>
+              <li>・ポモドーロタイマーとの連携分析</li>
+            </ul>
+          </div>
+          <p>右下のFitbitアプリボタンから連携してください。</p>
       </>
     ),
   },
@@ -46,15 +52,6 @@ const STATUS_COPY: Record<
     subtitle: (
       <>
         Google Healthで本日の睡眠データを登録してください。
-        このアプリでは以下の目的で Google アカウント認証を利用します。
-        <br />
-        ・Fitbit活動データの取得
-        <br />
-        ・睡眠データの取得
-        <br />
-        ・活動量データの表示
-        <br />
-        ・ポモドーロタイマーとの連携分析
       </>
     ),
   },
@@ -75,7 +72,7 @@ export const StatusOverlay = ({ status, visible }: StatusOverlayProps) => {
         <p className="text-3xl tracking-widest font-bold sm:text-4xl text-[#c4a574]">
           {copy.title}
         </p>
-        <div className="mt-4 text-sm text-mono-muted/70 wrap-anywhere"><div>{copy.subtitle}</div></div>
+        <div className="mt-4 text-sm text-mono-text/70 wrap-anywhere"><div>{copy.subtitle}</div></div>
       </div>
     </div>
   )

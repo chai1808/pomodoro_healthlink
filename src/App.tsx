@@ -99,8 +99,14 @@ const AppContent = ({
         )}
       </main>
 
-      <div className="fixed right-5 bottom-6 z-30 flex gap-2">
-        <a href="/privacy-policy.html" aria-label="プライバシーポリシーを表示" className="flex"><img src="../shieldicon.svg" alt="Policy" width="25" height="25" /></a>
+      <aside
+        className="fixed flex bottom-3 left-[max(1rem,env(safe-area-inset-left))] z-30 max-w-[18rem] -translate-y-1/2"
+        aria-label="アプリの説明"
+      >
+        <p className="text-[10px] leading-relaxed text-mono-muted">Pomodoro Healthlinkは健康データと連携して、<br></br>集中時間と健康状態を可視化するタイマーです。</p>
+        </aside>
+      <div className="fixed right-4 bottom-6 z-30 flex gap-2">
+        <a href="/privacy-policy.html" aria-label="プライバシーポリシーを表示" className="flex pt-1"><img src="../shieldicon.svg" alt="Policy" width="25" height="25" /></a>
 
         {healthConnected ? (
           <button
