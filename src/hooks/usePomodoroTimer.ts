@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatElapsed, minutesToSeconds } from '../lib/utils'
-import { startWorkWhiteNoise, stopWorkWhiteNoise } from '../lib/sound'
+import { resumeWorkWhiteNoiseIfNeeded, startWorkWhiteNoise, stopWorkWhiteNoise } from '../lib/sound'
 import {
   cancelScheduledTimerNotifications,
   schedulePhaseNotifications,
@@ -246,6 +246,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     const handleResume = () => {
       if (document.visibilityState === 'hidden') return
       void syncFromWallClock()
+      resumeWorkWhiteNoiseIfNeeded()
     }
 
     document.addEventListener('visibilitychange', handleResume)
@@ -269,8 +270,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     } else {
       stopWorkWhiteNoise()
     }
-
-    return () => stopWorkWhiteNoise()
   }, [phase, sessionState])
 
   const configSnapshotRef = useRef('')
