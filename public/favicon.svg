@@ -2,6 +2,6 @@
   <rect width="512" height="512" fill="#020617"/>
   <circle cx="256" cy="256" r="180" stroke="#e8e8e8" stroke-width="8" fill="none"/>
   <circle cx="256" cy="256" r="8" fill="#e8e8e8"/>
-  <line x1="256" y1="256" x2="256" y2="120" stroke="#e8e8e8" stroke-width="6" stroke-linecap="round"/>
-  <line x1="256" y1="256" x2="340" y2="300" stroke="#7ecfc4" stroke-width="6" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="256" y2="120" stroke="#7ecfc4" stroke-width="6" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="340" y2="300" stroke="#e8e8e8" stroke-width="6" stroke-linecap="round"/>
 </svg>
