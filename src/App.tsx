@@ -6,7 +6,6 @@ import { WeatherBadge } from './components/WeatherBadge'
 import { SleepSummary } from './components/SleepSummary'
 import { ActivitySummary } from './components/ActivitySummary'
 import { HealthConnectButton } from './components/HealthConnectButton'
-import { PrivacyPolicySheet } from './components/PrivacyPolicySheet'
 import { useHealthData } from './hooks/useHealthData'
 import { usePomodoroTimer } from './hooks/usePomodoroTimer'
 import { getPomodoroConfig } from './lib/healthJudgment'
@@ -16,11 +15,8 @@ import type { HealthSnapshot } from './types'
 type AppContentProps = {
   snapshot: HealthSnapshot
   showDetails: boolean
-  showPrivacy: boolean
   onToggleDetails: () => void
   onCloseDetails: () => void
-  onTogglePrivacy: () => void
-  onClosePrivacy: () => void
   healthConfigured: boolean
   healthConnected: boolean
   onDisconnect: () => void
@@ -32,11 +28,8 @@ const bottomActionButtonClass =
 const AppContent = ({
   snapshot,
   showDetails,
-  showPrivacy,
   onToggleDetails,
   onCloseDetails,
-  onTogglePrivacy,
-  onClosePrivacy,
   healthConfigured,
   healthConnected,
   onDisconnect,
@@ -109,17 +102,13 @@ const AppContent = ({
       </main>
 
       <div className="fixed right-5 bottom-6 z-30 flex gap-2">
-        <button
-          type="button"
-          onClick={onTogglePrivacy}
+        <a
+          href="/privacy-policy.html"
           className={bottomActionButtonClass}
-          aria-expanded={showPrivacy}
-          aria-label={
-            showPrivacy ? 'プライバシーポリシーを閉じる' : 'プライバシーポリシーを表示'
-          }
+          aria-label="プライバシーポリシーを表示"
         >
-          {showPrivacy ? '閉じる' : 'プライバシー'}
-        </button>
+          プライバシー
+        </a>
 
         {healthConnected ? (
           <button
@@ -135,8 +124,6 @@ const AppContent = ({
           <HealthConnectButton configured={healthConfigured} />
         )}
       </div>
-
-      <PrivacyPolicySheet open={showPrivacy} onClose={onClosePrivacy} />
 
       {healthConnected ? (
         <>
@@ -197,7 +184,6 @@ const AppContent = ({
 
 export default function App() {
   const [showDetails, setShowDetails] = useState(false)
-  const [showPrivacy, setShowPrivacy] = useState(false)
   const {
     snapshot,
     loading,
@@ -236,25 +222,12 @@ export default function App() {
     disconnect()
   }
 
-  const handleToggleDetails = () => {
-    setShowPrivacy(false)
-    setShowDetails((prev) => !prev)
-  }
-
-  const handleTogglePrivacy = () => {
-    setShowDetails(false)
-    setShowPrivacy((prev) => !prev)
-  }
-
   return (
     <AppContent
       snapshot={snapshot}
       showDetails={showDetails}
-      showPrivacy={showPrivacy}
-      onToggleDetails={handleToggleDetails}
+      onToggleDetails={() => setShowDetails((prev) => !prev)}
       onCloseDetails={() => setShowDetails(false)}
-      onTogglePrivacy={handleTogglePrivacy}
-      onClosePrivacy={() => setShowPrivacy(false)}
       healthConfigured={healthConfigured}
       healthConnected={healthConnected}
       onDisconnect={handleDisconnect}
