@@ -205,6 +205,10 @@ const evaluateHealthStatus = (
   sleepRatio: number | null,
   stepRatio: number | null,
 ): HealthStatus => {
+  if (sleepRatio === 0 && sleepRatio !== null) {
+    return 'data_sleep_unregistered'
+  }
+
   if (sleepRatio === null || stepRatio === null) {
     return 'data_unavailable'
   }

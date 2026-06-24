@@ -1,4 +1,8 @@
 let audioContext: AudioContext | null = null
+let whiteNoiseSource: AudioBufferSourceNode | null = null
+let whiteNoiseGain: GainNode | null = null
+
+const WHITE_NOISE_GAIN = 0.02
 
 const getAudioContext = (): AudioContext => {
   if (!audioContext) {
@@ -7,29 +11,58 @@ const getAudioContext = (): AudioContext => {
   return audioContext
 }
 
-export const playPhaseSwitchSound = async (): Promise<void> => {
+const createWhiteNoiseBuffer = (ctx: AudioContext): AudioBuffer => {
+  const bufferSize = 2 * ctx.sampleRate
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+  const data = buffer.getChannelData(0)
+
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1
+  }
+
+  return buffer
+}
+
+export const startWorkWhiteNoise = async (): Promise<void> => {
+  if (whiteNoiseSource) return
+
   try {
     const ctx = getAudioContext()
     if (ctx.state === 'suspended') {
       await ctx.resume()
     }
 
-    const oscillator = ctx.createOscillator()
+    const source = ctx.createBufferSource()
+    source.buffer = createWhiteNoiseBuffer(ctx)
+    source.loop = true
+
     const gain = ctx.createGain()
+    gain.gain.value = WHITE_NOISE_GAIN
 
-    oscillator.type = 'sine'
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime)
-    oscillator.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15)
-
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
-
-    oscillator.connect(gain)
+    source.connect(gain)
     gain.connect(ctx.destination)
+    source.start()
 
-    oscillator.start(ctx.currentTime)
-    oscillator.stop(ctx.currentTime + 0.3)
+    whiteNoiseSource = source
+    whiteNoiseGain = gain
   } catch {
     // 音声再生不可環境では無視
+  }
+}
+
+export const stopWorkWhiteNoise = (): void => {
+  if (whiteNoiseSource) {
+    try {
+      whiteNoiseSource.stop()
+      whiteNoiseSource.disconnect()
+    } catch {
+      // 既に停止済み
+    }
+    whiteNoiseSource = null
+  }
+
+  if (whiteNoiseGain) {
+    whiteNoiseGain.disconnect()
+    whiteNoiseGain = null
   }
 }

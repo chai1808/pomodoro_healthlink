@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatElapsed, minutesToSeconds } from '../lib/utils'
-import { playPhaseSwitchSound } from '../lib/sound'
+import { startWorkWhiteNoise, stopWorkWhiteNoise } from '../lib/sound'
 import {
   cancelScheduledTimerNotifications,
   schedulePhaseNotifications,
@@ -13,6 +13,7 @@ import {
 } from '../lib/storage'
 import {
   clearTimerState,
+  resolveRestoredTimerState,
   saveTimerState,
 } from '../lib/timerPersistence'
 import { buildRemainingPhaseNotifications } from '../lib/timerSchedule'
@@ -23,19 +24,52 @@ type UsePomodoroTimerOptions = {
   enabled: boolean
 }
 
+const createInitialTimerState = (
+  config: PomodoroConfig,
+  workSeconds: number,
+  breakSeconds: number,
+) => {
+  const restored = resolveRestoredTimerState(
+    config,
+    workSeconds,
+    breakSeconds,
+  )
+
+  if (restored) return restored
+
+  return {
+    phase: 'work' as TimerPhase,
+    cycle: 1,
+    remainingSeconds: workSeconds,
+    sessionState: 'idle' as SessionState,
+    endAt: null as number | null,
+  }
+}
+
 export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) => {
   const workSeconds = minutesToSeconds(config.workMinutes)
   const breakSeconds = minutesToSeconds(config.breakMinutes)
 
-  const [phase, setPhase] = useState<TimerPhase>('work')
-  const [cycle, setCycle] = useState(1)
-  const [remainingSeconds, setRemainingSeconds] = useState(workSeconds)
-  const [sessionState, setSessionState] = useState<SessionState>('idle')
+  const initialStateRef = useRef(
+    createInitialTimerState(config, workSeconds, breakSeconds),
+  )
+  const initialState = initialStateRef.current
+  const shouldResumeOnMount =
+    initialState.sessionState === 'running' && initialState.endAt !== null
+
+  const [phase, setPhase] = useState<TimerPhase>(initialState.phase)
+  const [cycle, setCycle] = useState(initialState.cycle)
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    initialState.remainingSeconds,
+  )
+  const [sessionState, setSessionState] = useState<SessionState>(
+    initialState.sessionState,
+  )
   const [isLimitReached, setIsLimitReached] = useState(
     () => isSessionLimitReached(config.maxSessionsPerDay),
   )
 
-  const endAtRef = useRef<number | null>(null)
+  const endAtRef = useRef<number | null>(initialState.endAt)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const phaseRef = useRef(phase)
   const cycleRef = useRef(cycle)
@@ -120,6 +154,18 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     [clearTimer, persistRunningState, syncScheduledNotifications],
   )
 
+  const hasResumedOnMountRef = useRef(false)
+
+  useEffect(() => {
+    if (!shouldResumeOnMount || hasResumedOnMountRef.current) return
+    hasResumedOnMountRef.current = true
+    startCountdown(
+      initialState.remainingSeconds,
+      initialState.phase,
+      initialState.cycle,
+    )
+  }, [shouldResumeOnMount, initialState, startCountdown])
+
   const completeSession = useCallback(() => {
     incrementDailySession()
     const usage = loadDailyUsage()
@@ -141,8 +187,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       const currentPhase = phaseRef.current
       const currentCycle = cycleRef.current
       const currentConfig = configRef.current
-
-      await playPhaseSwitchSound()
 
       if (currentPhase === 'work') {
         await showTimerNotification(
@@ -217,8 +261,28 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
 
   useEffect(() => () => clearTimer(), [clearTimer])
 
+  useEffect(() => {
+    const shouldPlayWhiteNoise = sessionState === 'running' && phase === 'work'
+
+    if (shouldPlayWhiteNoise) {
+      void startWorkWhiteNoise()
+    } else {
+      stopWorkWhiteNoise()
+    }
+
+    return () => stopWorkWhiteNoise()
+  }, [phase, sessionState])
+
+  const configSnapshotRef = useRef('')
+
   useLayoutEffect(() => {
     if (sessionState === 'running' || sessionState === 'paused') return
+
+    const snapshot = `${config.mode}:${workSeconds}:${config.cycles}:${config.maxSessionsPerDay}`
+    if (snapshot === configSnapshotRef.current && sessionState !== 'completed') {
+      return
+    }
+    configSnapshotRef.current = snapshot
 
     clearTimer()
     endAtRef.current = null
@@ -263,11 +327,12 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       phase,
       cycle,
       endAt: null,
+      remainingSeconds,
       configMode: config.mode,
       updatedAt: Date.now(),
     })
     setSessionState('paused')
-  }, [sessionState, clearTimer, phase, cycle, config.mode])
+  }, [sessionState, clearTimer, phase, cycle, remainingSeconds, config.mode])
 
   const handleResume = useCallback(() => {
     if (sessionState !== 'paused') return

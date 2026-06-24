@@ -34,9 +34,17 @@ const STATUS_COPY: Record<
     title: 'データ取得中',
     subtitle: (
       <>
-        Google Health から睡眠・歩数を取得できませんでした。
+        Google Healthから、睡眠・歩数を取得できませんでした。
         <br />
-        Fitbit アプリで同期後、再読み込みしてください
+        Fitbitアプリで、同期後、再読み込みしてください
+      </>
+    ),
+  },
+  data_sleep_unregistered: {
+    title: '睡眠データ未登録',
+    subtitle: (
+      <>
+        Google Healthで本日の睡眠データを登録してください。
       </>
     ),
   },

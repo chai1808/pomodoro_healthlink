@@ -20,7 +20,7 @@ export const TimerControls = ({
   if (isLimitReached) {
     return (
       <p
-        className="text-center text-sm tracking-wide text-mono-muted"
+        className="text-center text-sm tracking-wide font-bold text-xl text-[#c4a574]"
         role="status"
       >
         本日の学習は終了しました

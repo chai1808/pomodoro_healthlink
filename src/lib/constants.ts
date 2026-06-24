@@ -4,24 +4,28 @@ export const SLEEP_RECENT_DAYS = 8
 export const PRESSURE_RANGE_THRESHOLD = 4
 export const MAX_DROP_THRESHOLD = 4
 
+export const POMODORO_COLORS = {
+  BACKGROUND_BORDER_COLOR: '#1E293B',
+  WORK_BORDER_COLOR: '#7ecfc4',
+  BREAK_BORDER_COLOR:'#c4a574',
+}
+
 export const POMODORO_CONFIGS = {
   optimal: {
     mode: 'optimal' as const,
-    workMinutes: 25,
-    breakMinutes: 5,
-    cycles: 6,
-    maxSessionsPerDay: 2,
-    workBorderColor: '#475569',
-    breakBorderColor: '#7ecfc4',
+    // workMinutes: 90,
+    // breakMinutes: 30,
+    workMinutes: 3,
+    breakMinutes: 1,
+    cycles: 2,
+    maxSessionsPerDay: 2
   },
   reduced: {
     mode: 'reduced' as const,
-    workMinutes: 15,
+    workMinutes: 25,
     breakMinutes: 5,
-    cycles: 3,
-    maxSessionsPerDay: 1,
-    workBorderColor: '#475569',
-    breakBorderColor: '#c4a574',
+    cycles: 6,
+    maxSessionsPerDay: 1
   },
 } as const
 

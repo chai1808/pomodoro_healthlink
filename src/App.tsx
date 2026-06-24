@@ -10,6 +10,7 @@ import { useHealthData } from './hooks/useHealthData'
 import { usePomodoroTimer } from './hooks/usePomodoroTimer'
 import { getPomodoroConfig } from './lib/healthJudgment'
 import { requestNotificationPermission } from './lib/notifications'
+import { loadDailyUsage } from './lib/storage'
 import type { HealthSnapshot } from './types'
 
 type AppContentProps = {
@@ -40,10 +41,20 @@ const AppContent = ({
   })
 
   const timerDisabled = !isHealthy || timer.isLimitReached
+  const completedSessions = loadDailyUsage().completedSessions
+  const currentDailySession = Math.min(
+    completedSessions + 1,
+    config.maxSessionsPerDay,
+  )
   const modeLabel =
-    snapshot.pomodoroMode === 'optimal'
-      ? '25分 × 6サイクル（1日2回）'
-      : '15分 × 3サイクル（1日1回）'
+    config.workMinutes +
+    '分 × ' +
+    config.cycles +
+    'サイクル（1日' +
+    config.maxSessionsPerDay +
+    '回、うち現在' +
+    currentDailySession +
+    '回目）'
 
   return (
     <div className="relative flex h-full min-h-dvh flex-col">
@@ -65,8 +76,6 @@ const AppContent = ({
             displayTime={timer.displayTime}
             phase={timer.phase}
             progress={timer.progress}
-            workBorderColor={config.workBorderColor}
-            breakBorderColor={config.breakBorderColor}
             cycle={timer.cycle}
             totalCycles={timer.totalCycles}
             disabled={timerDisabled}

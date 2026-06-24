@@ -3,6 +3,7 @@ export type HealthStatus =
   | 'sleep_day'
   | 'activity_day'
   | 'data_unavailable'
+  | 'data_sleep_unregistered'
 
 export type PomodoroMode = 'optimal' | 'reduced'
 
@@ -66,8 +67,6 @@ export type PomodoroConfig = {
   breakMinutes: number
   cycles: number
   maxSessionsPerDay: number
-  workBorderColor: string
-  breakBorderColor: string
 }
 
 export type DailyUsage = {

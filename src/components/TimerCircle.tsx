@@ -1,11 +1,10 @@
 import type { TimerPhase } from '../types'
+import { POMODORO_COLORS } from '../lib/constants'
 
 type TimerCircleProps = {
   displayTime: string
   phase: TimerPhase
   progress: number
-  workBorderColor: string
-  breakBorderColor: string
   cycle: number
   totalCycles: number
   disabled?: boolean
@@ -21,14 +20,16 @@ export const TimerCircle = ({
   displayTime,
   phase,
   progress,
-  workBorderColor,
-  breakBorderColor,
   cycle,
   totalCycles,
   disabled = false,
 }: TimerCircleProps) => {
   const clampedProgress = Math.min(1, Math.max(0, progress))
   const elapsedLength = CIRCUMFERENCE * clampedProgress
+  const progressColor =
+    phase === 'work'
+      ? POMODORO_COLORS.WORK_BORDER_COLOR
+      : POMODORO_COLORS.BREAK_BORDER_COLOR
 
   return (
     <div
@@ -51,7 +52,7 @@ export const TimerCircle = ({
           cy={CENTER}
           r={RADIUS}
           fill="none"
-          stroke={`${workBorderColor}`}
+          stroke={POMODORO_COLORS.BACKGROUND_BORDER_COLOR}
           strokeWidth={STROKE}
         />
         {/* 経過に応じて12時方向から時計回りに伸びる */}
@@ -60,11 +61,11 @@ export const TimerCircle = ({
           cy={CENTER}
           r={RADIUS}
           fill="none"
-          stroke={`${breakBorderColor}`}
+          stroke={progressColor}
           strokeWidth={STROKE}
           strokeLinecap="round"
           strokeDasharray={`${elapsedLength} ${CIRCUMFERENCE}`}
-          className="transition-[stroke-dasharray] duration-300"
+          className="transition-[stroke-dasharray,stroke] duration-300"
         />
       </svg>
 
