@@ -57,15 +57,6 @@ const AppContent = ({
 
   return (
     <div className="relative flex h-full min-h-dvh flex-col">
-      <aside
-        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-[max(1.25rem,env(safe-area-inset-left))] z-10 max-w-[21rem]"
-        aria-label="アプリの説明"
-      >
-        <p className="text-[10px] leading-relaxed text-mono-muted">
-          Pomodoro Healthlink は Fitbit の健康データと連携して、
-          集中時間と健康状態を可視化するポモドーロタイマーです。
-        </p>
-      </aside>
 
       <header className="flex shrink-0 items-center justify-between px-4 py-3 sm:px-6">
         <h1 className="text-xs tracking-[0.3em] text-mono-muted uppercase">
@@ -73,7 +64,7 @@ const AppContent = ({
         </h1>
       </header>
 
-      <main className="relative flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-38 sm:gap-8">
+      <main className="relative flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-24 sm:gap-8">
         <StatusOverlay status={snapshot.status} visible={!isHealthy} />
 
         <div
