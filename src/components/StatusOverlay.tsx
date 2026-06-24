@@ -46,6 +46,15 @@ const STATUS_COPY: Record<
     subtitle: (
       <>
         Google Healthで本日の睡眠データを登録してください。
+        このアプリでは以下の目的で Google アカウント認証を利用します。
+        <br />
+        ・Fitbit活動データの取得
+        <br />
+        ・睡眠データの取得
+        <br />
+        ・活動量データの表示
+        <br />
+        ・ポモドーロタイマーとの連携分析
       </>
     ),
   },
