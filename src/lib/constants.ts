@@ -13,10 +13,8 @@ export const POMODORO_COLORS = {
 export const POMODORO_CONFIGS = {
   optimal: {
     mode: 'optimal' as const,
-    // workMinutes: 90,
-    // breakMinutes: 30,
-    workMinutes: 3,
-    breakMinutes: 1,
+    workMinutes: 90,
+    breakMinutes: 30,
     cycles: 2,
     maxSessionsPerDay: 2
   },

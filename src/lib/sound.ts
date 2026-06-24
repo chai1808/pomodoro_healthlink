@@ -1,6 +1,7 @@
-const WHITE_NOISE_GAIN = 0.001
+const WHITE_NOISE_GAIN = 0.00035
+const NOISE_AMPLITUDE = 0.06
 const SAMPLE_RATE = 22050
-const LOOP_SECONDS = 60
+const LOOP_SECONDS = 30
 
 let audioElement: HTMLAudioElement | null = null
 let noiseUrl: string | null = null
@@ -21,6 +22,7 @@ const createNoiseWavUrl = (): string => {
   const dataSize = numSamples * 2
   const buffer = new ArrayBuffer(44 + dataSize)
   const view = new DataView(buffer)
+  const peak = Math.floor(NOISE_AMPLITUDE * 32767)
 
   writeString(view, 0, 'RIFF')
   view.setUint32(4, 36 + dataSize, true)
@@ -37,7 +39,7 @@ const createNoiseWavUrl = (): string => {
   view.setUint32(40, dataSize, true)
 
   for (let i = 0; i < numSamples; i++) {
-    const sample = Math.floor((Math.random() * 2 - 1) * 32767)
+    const sample = Math.floor((Math.random() * 2 - 1) * peak)
     view.setInt16(44 + i * 2, sample, true)
   }
 
@@ -188,8 +190,6 @@ export const setAudioMuted = (muted: boolean): void => {
     void tryPlay(true)
   }
 }
-
-export const getAudioMuted = (): boolean => userMuted
 
 export const startWorkWhiteNoise = async (
   forceRestart = false,

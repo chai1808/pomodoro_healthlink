@@ -45,10 +45,9 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   const workSeconds = minutesToSeconds(config.workMinutes)
   const breakSeconds = minutesToSeconds(config.breakMinutes)
 
-  const initialStateRef = useRef(
+  const [initialState] = useState(() =>
     createInitialTimerState(config, workSeconds, breakSeconds),
   )
-  const initialState = initialStateRef.current
   const shouldResumeOnMount =
     initialState.sessionState === 'running' && initialState.endAt !== null
 
@@ -343,7 +342,9 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     workSeconds,
   ])
 
-  syncAllFromWallClockRef.current = syncAllFromWallClock
+  useEffect(() => {
+    syncAllFromWallClockRef.current = syncAllFromWallClock
+  }, [syncAllFromWallClock])
 
   const hasResumedOnMountRef = useRef(false)
 
