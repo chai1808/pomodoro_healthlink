@@ -78,32 +78,35 @@ const setMediaSessionPlaying = (playing: boolean): void => {
   navigator.mediaSession.playbackState = 'none'
 }
 
-const playWhiteNoise = async (): Promise<void> => {
+const playWhiteNoise = async (forceRestart = false): Promise<void> => {
   if (isStarting) return
   isStarting = true
 
   try {
     const ctx = getAudioContext()
+    const wasSuspended = ctx.state === 'suspended'
 
-    if (ctx.state === 'suspended') {
+    if (wasSuspended) {
       await ctx.resume()
     }
 
-    if (!whiteNoiseSource) {
+    if (forceRestart || wasSuspended || !whiteNoiseSource) {
       startSourceNodes(ctx)
     }
 
     setMediaSessionPlaying(true)
   } catch {
-    // 自動再生制限などでは無視
+    // 自動再生不可環境では無視
   } finally {
     isStarting = false
   }
 }
 
-export const startWorkWhiteNoise = async (): Promise<void> => {
+export const startWorkWhiteNoise = async (
+  forceRestart = false,
+): Promise<void> => {
   shouldPlayWorkWhiteNoise = true
-  await playWhiteNoise()
+  await playWhiteNoise(forceRestart)
 }
 
 export const stopWorkWhiteNoise = (): void => {
@@ -117,7 +120,7 @@ export const resumeWorkWhiteNoiseIfNeeded = (): void => {
   if (resumeTimer) clearTimeout(resumeTimer)
   resumeTimer = setTimeout(() => {
     resumeTimer = null
-    void playWhiteNoise()
+    void playWhiteNoise(true)
   }, 150)
 }
 

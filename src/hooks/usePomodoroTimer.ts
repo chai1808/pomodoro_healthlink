@@ -252,13 +252,23 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     }
   }, [applyRunningTimer, breakSeconds, completeSession, workSeconds])
 
+  const syncWorkAudio = useCallback(() => {
+    if (sessionStateRef.current === 'running' && phaseRef.current === 'work') {
+      void startWorkWhiteNoise(true)
+      return
+    }
+    stopWorkWhiteNoise()
+  }, [])
+
   const hasResumedOnMountRef = useRef(false)
 
   useLayoutEffect(() => {
     if (!shouldResumeOnMount || hasResumedOnMountRef.current) return
     hasResumedOnMountRef.current = true
-    void syncFromWallClock()
-  }, [shouldResumeOnMount, syncFromWallClock])
+    void syncFromWallClock().finally(() => {
+      syncWorkAudio()
+    })
+  }, [shouldResumeOnMount, syncFromWallClock, syncWorkAudio])
 
   useEffect(() => {
     if (shouldResumeOnMount && !hasResumedOnMountRef.current) return
@@ -269,7 +279,9 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   useEffect(() => {
     const handleResume = () => {
       if (document.visibilityState === 'hidden') return
-      void syncFromWallClock()
+      void syncFromWallClock().finally(() => {
+        syncWorkAudio()
+      })
     }
 
     document.addEventListener('visibilitychange', handleResume)
@@ -281,7 +293,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       window.removeEventListener('focus', handleResume)
       window.removeEventListener('pageshow', handleResume)
     }
-  }, [syncFromWallClock])
+  }, [syncFromWallClock, syncWorkAudio])
 
   useEffect(() => () => clearTimer(), [clearTimer])
 
