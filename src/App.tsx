@@ -116,7 +116,7 @@ const AppContent = ({
             aria-expanded={showDetails}
             aria-label={showDetails ? '詳細を閉じる' : '詳細データを表示'}
           >
-            {showDetails ? '閉じる' : 'Health Details'}
+            {showDetails ? '閉じる' : '健康状態'}
           </button>
         ) : (
           <HealthConnectButton configured={healthConfigured} />
