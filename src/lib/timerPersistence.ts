@@ -1,4 +1,3 @@
-import { catchUpTimerFromWallClock } from './timerSchedule'
 import { STORAGE_KEYS } from './constants'
 import type { PomodoroConfig, SessionState, TimerPhase } from '../types'
 
@@ -56,26 +55,17 @@ export const resolveRestoredTimerState = (
     persisted.phase === 'work' ? workSeconds : breakSeconds
 
   if (persisted.sessionState === 'running' && persisted.endAt) {
-    const result = catchUpTimerFromWallClock(
-      persisted.phase,
-      persisted.cycle,
-      persisted.endAt,
-      config,
-      workSeconds,
-      breakSeconds,
+    const remainingSeconds = Math.max(
+      0,
+      Math.ceil((persisted.endAt - Date.now()) / 1000),
     )
 
-    if (result.status === 'completed') {
-      clearTimerState()
-      return null
-    }
-
     return {
-      phase: result.phase,
-      cycle: result.cycle,
-      remainingSeconds: result.remainingSeconds,
-      sessionState: 'running',
-      endAt: result.endAt,
+      phase: persisted.phase,
+      cycle: persisted.cycle,
+      remainingSeconds,
+      sessionState: 'paused',
+      endAt: null,
     }
   }
 

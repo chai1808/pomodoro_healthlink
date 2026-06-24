@@ -1,5 +1,3 @@
-import type { PhaseAudioSchedule } from './timerSchedule'
-
 const WHITE_NOISE_GAIN = 0.001
 const SAMPLE_RATE = 22050
 const LOOP_SECONDS = 60
@@ -10,8 +8,6 @@ let userMuted = false
 let shouldPlayWorkWhiteNoise = false
 let intentionalPause = false
 let isStarting = false
-let resumeTimer: ReturnType<typeof setTimeout> | null = null
-let phaseTimer: ReturnType<typeof setTimeout> | null = null
 let interruptionTimer: ReturnType<typeof setInterval> | null = null
 
 const writeString = (view: DataView, offset: number, value: string) => {
@@ -48,13 +44,6 @@ const createNoiseWavUrl = (): string => {
   return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }))
 }
 
-const clearPhaseTimer = (): void => {
-  if (phaseTimer) {
-    clearTimeout(phaseTimer)
-    phaseTimer = null
-  }
-}
-
 const stopInterruptionRecovery = (): void => {
   if (interruptionTimer) {
     clearInterval(interruptionTimer)
@@ -64,9 +53,15 @@ const stopInterruptionRecovery = (): void => {
 
 const startInterruptionRecovery = (): void => {
   if (interruptionTimer || !shouldPlayWorkWhiteNoise || userMuted) return
+  if (document.visibilityState === 'hidden') return
 
   interruptionTimer = setInterval(() => {
-    if (!shouldPlayWorkWhiteNoise || !audioElement || userMuted) {
+    if (
+      !shouldPlayWorkWhiteNoise ||
+      !audioElement ||
+      userMuted ||
+      document.visibilityState === 'hidden'
+    ) {
       stopInterruptionRecovery()
       return
     }
@@ -125,6 +120,7 @@ const ensureNoiseSource = (audio: HTMLAudioElement): void => {
 
 const tryPlay = async (forceRestart = false): Promise<void> => {
   if (userMuted || !shouldPlayWorkWhiteNoise) return
+  if (document.visibilityState === 'hidden') return
   if (isStarting) return
   isStarting = true
 
@@ -179,42 +175,6 @@ export const syncImmediatePhaseAudio = (phase: 'work' | 'break'): void => {
   pauseForBreak()
 }
 
-const schedulePhaseEnd = (
-  schedules: PhaseAudioSchedule[],
-  index: number,
-): void => {
-  const item = schedules[index]
-  if (!item) return
-
-  const delay = item.endAt - Date.now()
-  const fire = () => {
-    phaseTimer = null
-
-    if (item.phase === 'work') {
-      pauseForBreak()
-    }
-
-    const nextIndex = index + 1
-    const next = schedules[nextIndex]
-    if (!next) return
-
-    if (next.phase === 'work') {
-      syncImmediatePhaseAudio('work')
-    } else {
-      pauseForBreak()
-    }
-
-    schedulePhaseEnd(schedules, nextIndex)
-  }
-
-  if (delay <= 0) {
-    fire()
-    return
-  }
-
-  phaseTimer = setTimeout(fire, delay)
-}
-
 export const setAudioMuted = (muted: boolean): void => {
   userMuted = muted
   if (muted) {
@@ -231,20 +191,6 @@ export const setAudioMuted = (muted: boolean): void => {
 
 export const getAudioMuted = (): boolean => userMuted
 
-export const schedulePhaseAudioChain = (
-  schedules: PhaseAudioSchedule[],
-): void => {
-  clearPhaseTimer()
-  stopInterruptionRecovery()
-
-  if (schedules.length === 0) {
-    stopWorkWhiteNoise()
-    return
-  }
-
-  schedulePhaseEnd(schedules, 0)
-}
-
 export const startWorkWhiteNoise = async (
   forceRestart = false,
 ): Promise<void> => {
@@ -256,7 +202,6 @@ export const startWorkWhiteNoise = async (
 export const stopWorkWhiteNoise = (): void => {
   shouldPlayWorkWhiteNoise = false
   intentionalPause = true
-  clearPhaseTimer()
   stopInterruptionRecovery()
 
   if (audioElement) {
@@ -264,24 +209,4 @@ export const stopWorkWhiteNoise = (): void => {
   }
 
   setMediaSessionPlaying(false)
-}
-
-export const resumeWorkWhiteNoiseIfNeeded = (): void => {
-  if (!shouldPlayWorkWhiteNoise || userMuted) return
-  if (resumeTimer) clearTimeout(resumeTimer)
-  resumeTimer = setTimeout(() => {
-    resumeTimer = null
-    void tryPlay(true)
-  }, 0)
-}
-
-const handleVisibilityResume = (): void => {
-  if (document.visibilityState !== 'visible') return
-  resumeWorkWhiteNoiseIfNeeded()
-}
-
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', handleVisibilityResume)
-  window.addEventListener('pageshow', handleVisibilityResume)
-  window.addEventListener('focus', handleVisibilityResume)
 }
