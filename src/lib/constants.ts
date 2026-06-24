@@ -24,7 +24,7 @@ export const POMODORO_CONFIGS = {
     mode: 'reduced' as const,
     workMinutes: 25,
     breakMinutes: 5,
-    cycles: 6,
+    cycles: 4,
     maxSessionsPerDay: 1
   },
 } as const

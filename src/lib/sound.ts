@@ -1,66 +1,100 @@
+import type { PhaseAudioSchedule } from './timerSchedule'
+
 const WHITE_NOISE_GAIN = 0.02
 const SAMPLE_RATE = 22050
-const BUFFER_SECONDS = 1
+const LOOP_SECONDS = 30
 
-let audioContext: AudioContext | null = null
-let whiteNoiseSource: AudioBufferSourceNode | null = null
-let whiteNoiseGain: GainNode | null = null
+let audioElement: HTMLAudioElement | null = null
+let noiseUrl: string | null = null
 let shouldPlayWorkWhiteNoise = false
+let intentionalPause = false
 let isStarting = false
 let resumeTimer: ReturnType<typeof setTimeout> | null = null
+let phaseTimer: ReturnType<typeof setTimeout> | null = null
+let interruptionTimer: ReturnType<typeof setInterval> | null = null
 
-const getAudioContext = (): AudioContext => {
-  if (!audioContext) {
-    audioContext = new AudioContext({ sampleRate: SAMPLE_RATE })
+const writeString = (view: DataView, offset: number, value: string) => {
+  for (let i = 0; i < value.length; i++) {
+    view.setUint8(offset + i, value.charCodeAt(i))
   }
-  return audioContext
 }
 
-const createWhiteNoiseBuffer = (ctx: AudioContext): AudioBuffer => {
-  const bufferSize = SAMPLE_RATE * BUFFER_SECONDS
-  const buffer = ctx.createBuffer(1, bufferSize, SAMPLE_RATE)
-  const data = buffer.getChannelData(0)
+const createNoiseWavUrl = (): string => {
+  const numSamples = SAMPLE_RATE * LOOP_SECONDS
+  const dataSize = numSamples * 2
+  const buffer = new ArrayBuffer(44 + dataSize)
+  const view = new DataView(buffer)
 
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = Math.random() * 2 - 1
+  writeString(view, 0, 'RIFF')
+  view.setUint32(4, 36 + dataSize, true)
+  writeString(view, 8, 'WAVE')
+  writeString(view, 12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, SAMPLE_RATE, true)
+  view.setUint32(28, SAMPLE_RATE * 2, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  writeString(view, 36, 'data')
+  view.setUint32(40, dataSize, true)
+
+  for (let i = 0; i < numSamples; i++) {
+    const sample = Math.floor((Math.random() * 2 - 1) * 32767)
+    view.setInt16(44 + i * 2, sample, true)
   }
 
-  return buffer
+  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }))
 }
 
-const destroySourceNodes = (): void => {
-  if (whiteNoiseSource) {
-    try {
-      whiteNoiseSource.stop()
-    } catch {
-      // 既に停止済み
+const clearPhaseTimer = (): void => {
+  if (phaseTimer) {
+    clearTimeout(phaseTimer)
+    phaseTimer = null
+  }
+}
+
+const stopInterruptionRecovery = (): void => {
+  if (interruptionTimer) {
+    clearInterval(interruptionTimer)
+    interruptionTimer = null
+  }
+}
+
+const startInterruptionRecovery = (): void => {
+  if (interruptionTimer || !shouldPlayWorkWhiteNoise) return
+
+  interruptionTimer = setInterval(() => {
+    if (!shouldPlayWorkWhiteNoise || !audioElement) {
+      stopInterruptionRecovery()
+      return
     }
-    whiteNoiseSource.disconnect()
-    whiteNoiseSource = null
-  }
 
-  if (whiteNoiseGain) {
-    whiteNoiseGain.disconnect()
-    whiteNoiseGain = null
-  }
+    if (audioElement.paused) {
+      intentionalPause = false
+      void audioElement.play().catch(() => {})
+      return
+    }
+
+    stopInterruptionRecovery()
+  }, 1500)
 }
 
-const startSourceNodes = (ctx: AudioContext): void => {
-  destroySourceNodes()
+const getAudioElement = (): HTMLAudioElement => {
+  if (audioElement) return audioElement
 
-  const source = ctx.createBufferSource()
-  source.buffer = createWhiteNoiseBuffer(ctx)
-  source.loop = true
+  audioElement = new Audio()
+  audioElement.loop = true
+  audioElement.preload = 'auto'
+  audioElement.volume = WHITE_NOISE_GAIN
+  audioElement.setAttribute('playsinline', 'true')
 
-  const gain = ctx.createGain()
-  gain.gain.value = WHITE_NOISE_GAIN
+  audioElement.addEventListener('pause', () => {
+    if (!shouldPlayWorkWhiteNoise || intentionalPause) return
+    startInterruptionRecovery()
+  })
 
-  source.connect(gain)
-  gain.connect(ctx.destination)
-  source.start(0)
-
-  whiteNoiseSource = source
-  whiteNoiseGain = gain
+  return audioElement
 }
 
 const setMediaSessionPlaying = (playing: boolean): void => {
@@ -78,40 +112,128 @@ const setMediaSessionPlaying = (playing: boolean): void => {
   navigator.mediaSession.playbackState = 'none'
 }
 
-const playWhiteNoise = async (forceRestart = false): Promise<void> => {
+const ensureNoiseSource = (audio: HTMLAudioElement): void => {
+  if (!noiseUrl) {
+    noiseUrl = createNoiseWavUrl()
+  }
+
+  if (audio.src !== noiseUrl) {
+    audio.src = noiseUrl
+  }
+}
+
+const tryPlay = async (forceRestart = false): Promise<void> => {
   if (isStarting) return
   isStarting = true
 
   try {
-    const ctx = getAudioContext()
-    const wasSuspended = ctx.state === 'suspended'
+    const audio = getAudioElement()
+    ensureNoiseSource(audio)
 
-    if (wasSuspended) {
-      await ctx.resume()
+    if (forceRestart) {
+      audio.pause()
+      audio.currentTime = 0
     }
 
-    if (forceRestart || wasSuspended || !whiteNoiseSource) {
-      startSourceNodes(ctx)
+    if (!audio.paused && !forceRestart) {
+      setMediaSessionPlaying(true)
+      return
     }
 
+    intentionalPause = false
+    await audio.play()
     setMediaSessionPlaying(true)
+    stopInterruptionRecovery()
   } catch {
-    // 自動再生不可環境では無視
+    startInterruptionRecovery()
   } finally {
     isStarting = false
   }
+}
+
+const schedulePhaseEnd = (
+  schedules: PhaseAudioSchedule[],
+  index: number,
+): void => {
+  const item = schedules[index]
+  if (!item) return
+
+  const delay = item.endAt - Date.now()
+  const fire = () => {
+    if (item.phase === 'work') {
+      shouldPlayWorkWhiteNoise = false
+      intentionalPause = true
+      if (audioElement) audioElement.pause()
+      setMediaSessionPlaying(false)
+      stopInterruptionRecovery()
+    }
+
+    const nextIndex = index + 1
+    const next = schedules[nextIndex]
+    if (!next) {
+      shouldPlayWorkWhiteNoise = false
+      return
+    }
+
+    if (next.phase === 'work') {
+      shouldPlayWorkWhiteNoise = true
+      void tryPlay(false)
+    }
+
+    schedulePhaseEnd(schedules, nextIndex)
+  }
+
+  if (delay <= 0) {
+    fire()
+    return
+  }
+
+  phaseTimer = setTimeout(fire, delay)
+}
+
+export const schedulePhaseAudioChain = (
+  schedules: PhaseAudioSchedule[],
+): void => {
+  clearPhaseTimer()
+  stopInterruptionRecovery()
+
+  if (schedules.length === 0) {
+    stopWorkWhiteNoise()
+    return
+  }
+
+  const first = schedules[0]
+
+  if (first.phase === 'work') {
+    shouldPlayWorkWhiteNoise = true
+    void tryPlay(false)
+  } else {
+    shouldPlayWorkWhiteNoise = false
+    intentionalPause = true
+    if (audioElement) audioElement.pause()
+    setMediaSessionPlaying(false)
+  }
+
+  schedulePhaseEnd(schedules, 0)
 }
 
 export const startWorkWhiteNoise = async (
   forceRestart = false,
 ): Promise<void> => {
   shouldPlayWorkWhiteNoise = true
-  await playWhiteNoise(forceRestart)
+  await tryPlay(forceRestart)
 }
 
 export const stopWorkWhiteNoise = (): void => {
   shouldPlayWorkWhiteNoise = false
-  destroySourceNodes()
+  intentionalPause = true
+  clearPhaseTimer()
+  stopInterruptionRecovery()
+
+  if (audioElement) {
+    audioElement.pause()
+  }
+
   setMediaSessionPlaying(false)
 }
 
@@ -120,7 +242,7 @@ export const resumeWorkWhiteNoiseIfNeeded = (): void => {
   if (resumeTimer) clearTimeout(resumeTimer)
   resumeTimer = setTimeout(() => {
     resumeTimer = null
-    void playWhiteNoise(true)
+    void tryPlay(false)
   }, 150)
 }
 
@@ -132,4 +254,5 @@ const handleVisibilityResume = (): void => {
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', handleVisibilityResume)
   window.addEventListener('pageshow', handleVisibilityResume)
+  window.addEventListener('focus', handleVisibilityResume)
 }

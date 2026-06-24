@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatElapsed, minutesToSeconds } from '../lib/utils'
-import { startWorkWhiteNoise, stopWorkWhiteNoise } from '../lib/sound'
+import { startWorkWhiteNoise, stopWorkWhiteNoise, schedulePhaseAudioChain } from '../lib/sound'
 import {
   incrementDailySession,
   isSessionLimitReached,
@@ -11,7 +11,7 @@ import {
   resolveRestoredTimerState,
   saveTimerState,
 } from '../lib/timerPersistence'
-import { catchUpTimerFromWallClock } from '../lib/timerSchedule'
+import { buildRemainingPhaseAudioSchedule, catchUpTimerFromWallClock } from '../lib/timerSchedule'
 import type { PomodoroConfig, SessionState, TimerPhase } from '../types'
 
 type UsePomodoroTimerOptions = {
@@ -210,13 +210,28 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     }
   }, [applyRunningTimer, breakSeconds, completeSession, workSeconds])
 
-  const syncWorkAudio = useCallback(() => {
-    if (sessionStateRef.current === 'running' && phaseRef.current === 'work') {
-      void startWorkWhiteNoise(true)
+  const scheduleWorkAudio = useCallback(() => {
+    if (sessionStateRef.current !== 'running' || !endAtRef.current) {
+      stopWorkWhiteNoise()
       return
     }
-    stopWorkWhiteNoise()
+
+    const remaining = Math.max(
+      0,
+      Math.ceil((endAtRef.current - Date.now()) / 1000),
+    )
+    const schedules = buildRemainingPhaseAudioSchedule(
+      phaseRef.current,
+      cycleRef.current,
+      remaining,
+      configRef.current,
+    )
+    schedulePhaseAudioChain(schedules)
   }, [])
+
+  const syncWorkAudio = useCallback(() => {
+    scheduleWorkAudio()
+  }, [scheduleWorkAudio])
 
   const hasResumedOnMountRef = useRef(false)
 
@@ -254,14 +269,8 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   useEffect(() => () => clearTimer(), [clearTimer])
 
   useEffect(() => {
-    const shouldPlayWhiteNoise = sessionState === 'running' && phase === 'work'
-
-    if (shouldPlayWhiteNoise) {
-      void startWorkWhiteNoise()
-    } else {
-      stopWorkWhiteNoise()
-    }
-  }, [phase, sessionState])
+    scheduleWorkAudio()
+  }, [phase, sessionState, scheduleWorkAudio])
 
   const configSnapshotRef = useRef('')
 
@@ -296,6 +305,9 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     const seconds =
       remainingSeconds > 0 ? remainingSeconds : getPhaseSeconds(phase)
     startCountdown(seconds, phase, cycle)
+    if (phase === 'work') {
+      void startWorkWhiteNoise(true)
+    }
   }, [
     enabled,
     isLimitReached,
