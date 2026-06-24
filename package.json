@@ -7,13 +7,16 @@
     "dev": "node scripts/sync-env.mjs && vite",
     "build": "node scripts/sync-env.mjs && tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-vapid": "node scripts/generate-vapid.mjs"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "expo": "^56.0.12",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-native-background-fetch": "^4.4.2"
+    "react-native-background-fetch": "^4.4.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -3,6 +3,7 @@ import { formatElapsed, minutesToSeconds } from '../lib/utils'
 import { startWorkWhiteNoise, stopWorkWhiteNoise } from '../lib/sound'
 import {
   cancelScheduledTimerNotifications,
+  requestNotificationPermission,
   schedulePhaseNotifications,
   showTimerNotification,
 } from '../lib/notifications'
@@ -337,6 +338,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
 
   const handleStart = useCallback(() => {
     if (!enabled || isLimitReached) return
+    void requestNotificationPermission()
     setSessionState('running')
     const seconds =
       remainingSeconds > 0 ? remainingSeconds : getPhaseSeconds(phase)

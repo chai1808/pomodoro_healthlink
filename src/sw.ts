@@ -11,6 +11,26 @@ cleanupOutdatedCaches()
 self.skipWaiting()
 clientsClaim()
 
+type PushPayload = {
+  title?: string
+  body?: string
+  tag?: string
+}
+
+self.addEventListener('push', (event) => {
+  const payload = (event.data?.json() ?? {}) as PushPayload
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title ?? 'Pomodoro Healthlink', {
+      body: payload.body ?? '',
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      tag: payload.tag ?? 'pomodoro-push',
+      silent: false,
+    }),
+  )
+})
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   event.waitUntil(
