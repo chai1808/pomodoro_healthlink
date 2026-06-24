@@ -22,9 +22,6 @@ type AppContentProps = {
   onDisconnect: () => void
 }
 
-const bottomActionButtonClass =
-  'duration-200 cursor-pointer rounded-full border border-mono-border bg-mono-surface px-4 py-2.5 text-xs text-mono-text shadow-lg hover:border-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text'
-
 const AppContent = ({
   snapshot,
   showDetails,
@@ -102,23 +99,17 @@ const AppContent = ({
       </main>
 
       <div className="fixed right-5 bottom-6 z-30 flex gap-2">
-        <a
-          href="/privacy-policy.html"
-          className={bottomActionButtonClass}
-          aria-label="プライバシーポリシーを表示"
-        >
-          プライバシー
-        </a>
+        <a href="/privacy-policy.html" aria-label="プライバシーポリシーを表示" className="flex"><img src="../shieldicon.svg" alt="Policy" width="25" height="25" /></a>
 
         {healthConnected ? (
           <button
             type="button"
             onClick={onToggleDetails}
-            className={bottomActionButtonClass}
+            className='duration-200 cursor-pointer rounded-full border border-mono-border bg-mono-surface px-4 py-2.5 text-xs text-mono-text shadow-lg hover:border-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text'
             aria-expanded={showDetails}
             aria-label={showDetails ? '詳細を閉じる' : '詳細データを表示'}
           >
-            {showDetails ? '閉じる' : '詳細'}
+            {showDetails ? '閉じる' : 'Health Details'}
           </button>
         ) : (
           <HealthConnectButton configured={healthConfigured} />
