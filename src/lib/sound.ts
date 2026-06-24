@@ -1,6 +1,6 @@
 import type { PhaseAudioSchedule } from './timerSchedule'
 
-const WHITE_NOISE_GAIN = 0.01
+const WHITE_NOISE_GAIN = 0.005
 const SAMPLE_RATE = 22050
 const LOOP_SECONDS = 60
 
@@ -63,10 +63,10 @@ const stopInterruptionRecovery = (): void => {
 }
 
 const startInterruptionRecovery = (): void => {
-  if (interruptionTimer || !shouldPlayWorkWhiteNoise) return
+  if (interruptionTimer || !shouldPlayWorkWhiteNoise || userMuted) return
 
   interruptionTimer = setInterval(() => {
-    if (!shouldPlayWorkWhiteNoise || !audioElement) {
+    if (!shouldPlayWorkWhiteNoise || !audioElement || userMuted) {
       stopInterruptionRecovery()
       return
     }
@@ -78,7 +78,7 @@ const startInterruptionRecovery = (): void => {
     }
 
     stopInterruptionRecovery()
-  }, 1500)
+  }, 500)
 }
 
 const getAudioElement = (): HTMLAudioElement => {
@@ -91,7 +91,7 @@ const getAudioElement = (): HTMLAudioElement => {
   audioElement.setAttribute('playsinline', 'true')
 
   audioElement.addEventListener('pause', () => {
-    if (!shouldPlayWorkWhiteNoise || intentionalPause) return
+    if (!shouldPlayWorkWhiteNoise || intentionalPause || userMuted) return
     startInterruptionRecovery()
   })
 
@@ -124,7 +124,7 @@ const ensureNoiseSource = (audio: HTMLAudioElement): void => {
 }
 
 const tryPlay = async (forceRestart = false): Promise<void> => {
-  if (userMuted) return
+  if (userMuted || !shouldPlayWorkWhiteNoise) return
   if (isStarting) return
   isStarting = true
 
@@ -132,14 +132,16 @@ const tryPlay = async (forceRestart = false): Promise<void> => {
     const audio = getAudioElement()
     ensureNoiseSource(audio)
 
-    if (forceRestart) {
-      audio.pause()
-      audio.currentTime = 0
-    }
+    const needsRestart = forceRestart || intentionalPause || audio.paused
 
-    if (!audio.paused && !forceRestart) {
+    if (!needsRestart && !audio.paused) {
       setMediaSessionPlaying(true)
       return
+    }
+
+    if (needsRestart) {
+      audio.pause()
+      audio.currentTime = 0
     }
 
     intentionalPause = false
@@ -153,6 +155,30 @@ const tryPlay = async (forceRestart = false): Promise<void> => {
   }
 }
 
+const pauseForBreak = (): void => {
+  shouldPlayWorkWhiteNoise = false
+  intentionalPause = true
+  stopInterruptionRecovery()
+
+  if (audioElement) {
+    audioElement.pause()
+  }
+
+  setMediaSessionPlaying(false)
+}
+
+export const syncImmediatePhaseAudio = (phase: 'work' | 'break'): void => {
+  if (phase === 'work') {
+    shouldPlayWorkWhiteNoise = true
+    if (!userMuted) {
+      void tryPlay(true)
+    }
+    return
+  }
+
+  pauseForBreak()
+}
+
 const schedulePhaseEnd = (
   schedules: PhaseAudioSchedule[],
   index: number,
@@ -162,24 +188,20 @@ const schedulePhaseEnd = (
 
   const delay = item.endAt - Date.now()
   const fire = () => {
+    phaseTimer = null
+
     if (item.phase === 'work') {
-      shouldPlayWorkWhiteNoise = false
-      intentionalPause = true
-      if (audioElement) audioElement.pause()
-      setMediaSessionPlaying(false)
-      stopInterruptionRecovery()
+      pauseForBreak()
     }
 
     const nextIndex = index + 1
     const next = schedules[nextIndex]
-    if (!next) {
-      shouldPlayWorkWhiteNoise = false
-      return
-    }
+    if (!next) return
 
     if (next.phase === 'work') {
-      shouldPlayWorkWhiteNoise = true
-      if (!userMuted) void tryPlay(false)
+      syncImmediatePhaseAudio('work')
+    } else {
+      pauseForBreak()
     }
 
     schedulePhaseEnd(schedules, nextIndex)
@@ -203,7 +225,7 @@ export const setAudioMuted = (muted: boolean): void => {
   }
 
   if (shouldPlayWorkWhiteNoise) {
-    void tryPlay(false)
+    void tryPlay(true)
   }
 }
 
@@ -218,18 +240,6 @@ export const schedulePhaseAudioChain = (
   if (schedules.length === 0) {
     stopWorkWhiteNoise()
     return
-  }
-
-  const first = schedules[0]
-
-  if (first.phase === 'work') {
-    shouldPlayWorkWhiteNoise = true
-    if (!userMuted) void tryPlay(false)
-  } else {
-    shouldPlayWorkWhiteNoise = false
-    intentionalPause = true
-    if (audioElement) audioElement.pause()
-    setMediaSessionPlaying(false)
   }
 
   schedulePhaseEnd(schedules, 0)
@@ -257,11 +267,11 @@ export const stopWorkWhiteNoise = (): void => {
 }
 
 export const resumeWorkWhiteNoiseIfNeeded = (): void => {
-  if (!shouldPlayWorkWhiteNoise) return
+  if (!shouldPlayWorkWhiteNoise || userMuted) return
   if (resumeTimer) clearTimeout(resumeTimer)
   resumeTimer = setTimeout(() => {
     resumeTimer = null
-    void tryPlay(false)
+    void tryPlay(true)
   }, 0)
 }
 

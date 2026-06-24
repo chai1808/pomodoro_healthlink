@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatElapsed, minutesToSeconds } from '../lib/utils'
-import { startWorkWhiteNoise, stopWorkWhiteNoise, schedulePhaseAudioChain, setAudioMuted } from '../lib/sound'
+import { startWorkWhiteNoise, stopWorkWhiteNoise, schedulePhaseAudioChain, setAudioMuted, syncImmediatePhaseAudio } from '../lib/sound'
 import {
   incrementDailySession,
   isSessionLimitReached,
@@ -263,6 +263,12 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   }, [])
 
   const syncWorkAudio = useCallback(() => {
+    if (sessionStateRef.current !== 'running' || !endAtRef.current) {
+      stopWorkWhiteNoise()
+      return
+    }
+
+    syncImmediatePhaseAudio(phaseRef.current)
     scheduleWorkAudio()
   }, [scheduleWorkAudio])
 
@@ -305,6 +311,12 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   }, [clearTimer, clearWallClockTimer])
 
   useEffect(() => {
+    if (sessionState !== 'running') {
+      stopWorkWhiteNoise()
+      return
+    }
+
+    syncImmediatePhaseAudio(phase)
     scheduleWorkAudio()
   }, [phase, sessionState, scheduleWorkAudio])
 
