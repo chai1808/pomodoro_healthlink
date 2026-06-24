@@ -1,6 +1,6 @@
 import type { PhaseAudioSchedule } from './timerSchedule'
 
-const WHITE_NOISE_GAIN = 0.005
+const WHITE_NOISE_GAIN = 0.001
 const SAMPLE_RATE = 22050
 const LOOP_SECONDS = 60
 
