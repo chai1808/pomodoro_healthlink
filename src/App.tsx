@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { TimerCircle } from './components/TimerCircle'
 import { TimerControls } from './components/TimerControls'
 import { StatusOverlay } from './components/StatusOverlay'
@@ -9,7 +9,6 @@ import { HealthConnectButton } from './components/HealthConnectButton'
 import { useHealthData } from './hooks/useHealthData'
 import { usePomodoroTimer } from './hooks/usePomodoroTimer'
 import { getPomodoroConfig } from './lib/healthJudgment'
-import { requestNotificationPermission } from './lib/notifications'
 import { loadDailyUsage } from './lib/storage'
 import type { HealthSnapshot } from './types'
 
@@ -176,10 +175,6 @@ export default function App() {
     healthConnected,
     disconnect,
   } = useHealthData()
-
-  useEffect(() => {
-    requestNotificationPermission()
-  }, [])
 
   if (loading && !snapshot) {
     return (

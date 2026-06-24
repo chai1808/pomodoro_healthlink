@@ -2,12 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { formatElapsed, minutesToSeconds } from '../lib/utils'
 import { startWorkWhiteNoise, stopWorkWhiteNoise } from '../lib/sound'
 import {
-  cancelScheduledTimerNotifications,
-  requestNotificationPermission,
-  schedulePhaseNotifications,
-  showTimerNotification,
-} from '../lib/notifications'
-import {
   incrementDailySession,
   isSessionLimitReached,
   loadDailyUsage,
@@ -17,7 +11,7 @@ import {
   resolveRestoredTimerState,
   saveTimerState,
 } from '../lib/timerPersistence'
-import { buildRemainingPhaseNotifications, catchUpTimerFromWallClock, getPhaseEndNotificationCopy, getPhaseStartNotificationCopy } from '../lib/timerSchedule'
+import { catchUpTimerFromWallClock } from '../lib/timerSchedule'
 import type { PomodoroConfig, SessionState, TimerPhase } from '../types'
 
 type UsePomodoroTimerOptions = {
@@ -112,23 +106,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     [config.mode],
   )
 
-  const syncScheduledNotifications = useCallback(
-    async (
-      nextPhase: TimerPhase,
-      nextCycle: number,
-      secondsLeft: number,
-    ) => {
-      const schedules = buildRemainingPhaseNotifications(
-        nextPhase,
-        nextCycle,
-        secondsLeft,
-        config,
-      )
-      await schedulePhaseNotifications(schedules)
-    },
-    [config],
-  )
-
   const startTicking = useCallback(() => {
     clearTimer()
     intervalRef.current = setInterval(() => {
@@ -155,10 +132,9 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       setSessionState('running')
       setRemainingSeconds(left)
       persistRunningState(nextPhase, nextCycle, endAt)
-      void syncScheduledNotifications(nextPhase, nextCycle, left)
       startTicking()
     },
-    [persistRunningState, syncScheduledNotifications, startTicking],
+    [persistRunningState, startTicking],
   )
 
   const startCountdown = useCallback(
@@ -171,7 +147,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   const completeSession = useCallback(() => {
     incrementDailySession()
     const usage = loadDailyUsage()
-    void cancelScheduledTimerNotifications()
     clearTimerState()
     endAtRef.current = null
     setPhase('work')
@@ -181,7 +156,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     setRemainingSeconds(workSeconds)
   }, [config.maxSessionsPerDay, workSeconds])
 
-  const advancePhase = useCallback(async () => {
+  const advancePhase = useCallback(() => {
     if (isAdvancingRef.current) return
     isAdvancingRef.current = true
 
@@ -191,41 +166,33 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       const currentConfig = configRef.current
 
       if (currentPhase === 'work') {
-        const copy = getPhaseEndNotificationCopy('work', currentCycle, currentConfig)
-        await showTimerNotification(copy.title, copy.body)
         startCountdown(breakSeconds, 'break', currentCycle)
         return
       }
 
       const nextCycle = currentCycle + 1
       if (nextCycle > currentConfig.cycles) {
-        const copy = getPhaseEndNotificationCopy('work', currentCycle, currentConfig)
-        await showTimerNotification(copy.title, copy.body)
         completeSession()
         return
       }
 
-      const copy = getPhaseEndNotificationCopy('break', currentCycle, currentConfig)
-      await showTimerNotification(copy.title, copy.body)
       startCountdown(workSeconds, 'work', nextCycle)
     } finally {
       isAdvancingRef.current = false
     }
   }, [breakSeconds, completeSession, startCountdown, workSeconds])
 
-  const syncFromWallClock = useCallback(async () => {
+  const syncFromWallClock = useCallback(() => {
     if (sessionStateRef.current !== 'running' || !endAtRef.current) return
     if (isAdvancingRef.current) return
     isAdvancingRef.current = true
 
     try {
-      const beforePhase = phaseRef.current
-      const beforeCycle = cycleRef.current
       const currentConfig = configRef.current
 
       const result = catchUpTimerFromWallClock(
-        beforePhase,
-        beforeCycle,
+        phaseRef.current,
+        cycleRef.current,
         endAtRef.current,
         currentConfig,
         workSeconds,
@@ -233,18 +200,8 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       )
 
       if (result.status === 'completed') {
-        const copy = getPhaseEndNotificationCopy('work', beforeCycle, currentConfig)
-        await showTimerNotification(copy.title, copy.body)
         completeSession()
         return
-      }
-
-      const phaseChanged =
-        result.phase !== beforePhase || result.cycle !== beforeCycle
-
-      if (phaseChanged) {
-        const copy = getPhaseStartNotificationCopy(result.phase, currentConfig)
-        await showTimerNotification(copy.title, copy.body)
       }
 
       applyRunningTimer(result.phase, result.cycle, result.endAt)
@@ -266,23 +223,21 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   useLayoutEffect(() => {
     if (!shouldResumeOnMount || hasResumedOnMountRef.current) return
     hasResumedOnMountRef.current = true
-    void syncFromWallClock().finally(() => {
-      syncWorkAudio()
-    })
+    syncFromWallClock()
+    syncWorkAudio()
   }, [shouldResumeOnMount, syncFromWallClock, syncWorkAudio])
 
   useEffect(() => {
     if (shouldResumeOnMount && !hasResumedOnMountRef.current) return
     if (sessionState !== 'running' || remainingSeconds > 0) return
-    void advancePhase()
+    advancePhase()
   }, [sessionState, remainingSeconds, advancePhase, shouldResumeOnMount])
 
   useEffect(() => {
     const handleResume = () => {
       if (document.visibilityState === 'hidden') return
-      void syncFromWallClock().finally(() => {
-        syncWorkAudio()
-      })
+      syncFromWallClock()
+      syncWorkAudio()
     }
 
     document.addEventListener('visibilitychange', handleResume)
@@ -321,7 +276,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
 
     clearTimer()
     endAtRef.current = null
-    void cancelScheduledTimerNotifications()
     clearTimerState()
     setPhase('work')
     setCycle(1)
@@ -338,7 +292,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
 
   const handleStart = useCallback(() => {
     if (!enabled || isLimitReached) return
-    void requestNotificationPermission()
     setSessionState('running')
     const seconds =
       remainingSeconds > 0 ? remainingSeconds : getPhaseSeconds(phase)
@@ -357,7 +310,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     if (sessionState !== 'running') return
     clearTimer()
     endAtRef.current = null
-    void cancelScheduledTimerNotifications()
     saveTimerState({
       sessionState: 'paused',
       phase,
@@ -379,7 +331,6 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   const handleReset = useCallback(() => {
     clearTimer()
     endAtRef.current = null
-    void cancelScheduledTimerNotifications()
     clearTimerState()
     setPhase('work')
     setCycle(1)
