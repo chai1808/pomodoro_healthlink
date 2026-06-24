@@ -1,76 +1,103 @@
-const WHITE_NOISE_VOLUME = 0.02
+const WHITE_NOISE_GAIN = 0.02
+const SAMPLE_RATE = 22050
+const BUFFER_SECONDS = 1
 
-let whiteNoiseAudio: HTMLAudioElement | null = null
-let whiteNoiseUrl: string | null = null
+let audioContext: AudioContext | null = null
+let whiteNoiseSource: AudioBufferSourceNode | null = null
+let whiteNoiseGain: GainNode | null = null
 let shouldPlayWorkWhiteNoise = false
+let isStarting = false
+let resumeTimer: ReturnType<typeof setTimeout> | null = null
 
-const createWhiteNoiseWavBlob = (): Blob => {
-  const sampleRate = 44100
-  const durationSeconds = 2
-  const numSamples = sampleRate * durationSeconds
-  const buffer = new ArrayBuffer(44 + numSamples * 2)
-  const view = new DataView(buffer)
-
-  const writeString = (offset: number, value: string) => {
-    for (let i = 0; i < value.length; i++) {
-      view.setUint8(offset + i, value.charCodeAt(i))
-    }
+const getAudioContext = (): AudioContext => {
+  if (!audioContext) {
+    audioContext = new AudioContext({ sampleRate: SAMPLE_RATE })
   }
-
-  writeString(0, 'RIFF')
-  view.setUint32(4, 36 + numSamples * 2, true)
-  writeString(8, 'WAVE')
-  writeString(12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, 1, true)
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, sampleRate * 2, true)
-  view.setUint16(32, 2, true)
-  view.setUint16(34, 16, true)
-  writeString(36, 'data')
-  view.setUint32(40, numSamples * 2, true)
-
-  for (let i = 0; i < numSamples; i++) {
-    const sample = (Math.random() * 2 - 1) * 0.35
-    view.setInt16(44 + i * 2, sample * 0x7fff, true)
-  }
-
-  return new Blob([buffer], { type: 'audio/wav' })
+  return audioContext
 }
 
-const getWhiteNoiseAudio = (): HTMLAudioElement => {
-  if (whiteNoiseAudio) return whiteNoiseAudio
+const createWhiteNoiseBuffer = (ctx: AudioContext): AudioBuffer => {
+  const bufferSize = SAMPLE_RATE * BUFFER_SECONDS
+  const buffer = ctx.createBuffer(1, bufferSize, SAMPLE_RATE)
+  const data = buffer.getChannelData(0)
 
-  if (!whiteNoiseUrl) {
-    whiteNoiseUrl = URL.createObjectURL(createWhiteNoiseWavBlob())
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1
   }
 
-  const audio = new Audio(whiteNoiseUrl)
-  audio.loop = true
-  audio.preload = 'auto'
-  audio.volume = WHITE_NOISE_VOLUME
-  audio.setAttribute('playsinline', 'true')
-  whiteNoiseAudio = audio
-  return audio
+  return buffer
+}
+
+const destroySourceNodes = (): void => {
+  if (whiteNoiseSource) {
+    try {
+      whiteNoiseSource.stop()
+    } catch {
+      // 既に停止済み
+    }
+    whiteNoiseSource.disconnect()
+    whiteNoiseSource = null
+  }
+
+  if (whiteNoiseGain) {
+    whiteNoiseGain.disconnect()
+    whiteNoiseGain = null
+  }
+}
+
+const startSourceNodes = (ctx: AudioContext): void => {
+  destroySourceNodes()
+
+  const source = ctx.createBufferSource()
+  source.buffer = createWhiteNoiseBuffer(ctx)
+  source.loop = true
+
+  const gain = ctx.createGain()
+  gain.gain.value = WHITE_NOISE_GAIN
+
+  source.connect(gain)
+  gain.connect(ctx.destination)
+  source.start(0)
+
+  whiteNoiseSource = source
+  whiteNoiseGain = gain
+}
+
+const setMediaSessionPlaying = (playing: boolean): void => {
+  if (!('mediaSession' in navigator)) return
+
+  if (playing) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: '作業中',
+      artist: 'Pomodoro Healthlink',
+    })
+    navigator.mediaSession.playbackState = 'playing'
+    return
+  }
+
+  navigator.mediaSession.playbackState = 'none'
 }
 
 const playWhiteNoise = async (): Promise<void> => {
-  try {
-    const audio = getWhiteNoiseAudio()
-    if (!audio.paused) return
+  if (isStarting) return
+  isStarting = true
 
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: '作業中',
-        artist: 'Pomodoro Healthlink',
-      })
-      navigator.mediaSession.playbackState = 'playing'
+  try {
+    const ctx = getAudioContext()
+
+    if (ctx.state === 'suspended') {
+      await ctx.resume()
     }
 
-    await audio.play()
+    if (!whiteNoiseSource) {
+      startSourceNodes(ctx)
+    }
+
+    setMediaSessionPlaying(true)
   } catch {
-    // 自動再生制限などでは無視（フォアグラウンド復帰時に再試行）
+    // 自動再生制限などでは無視
+  } finally {
+    isStarting = false
   }
 }
 
@@ -81,21 +108,20 @@ export const startWorkWhiteNoise = async (): Promise<void> => {
 
 export const stopWorkWhiteNoise = (): void => {
   shouldPlayWorkWhiteNoise = false
-  if (!whiteNoiseAudio) return
-  whiteNoiseAudio.pause()
-  whiteNoiseAudio.currentTime = 0
-
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.playbackState = 'none'
-  }
+  destroySourceNodes()
+  setMediaSessionPlaying(false)
 }
 
 export const resumeWorkWhiteNoiseIfNeeded = (): void => {
   if (!shouldPlayWorkWhiteNoise) return
-  void playWhiteNoise()
+  if (resumeTimer) clearTimeout(resumeTimer)
+  resumeTimer = setTimeout(() => {
+    resumeTimer = null
+    void playWhiteNoise()
+  }, 150)
 }
 
-const handleVisibilityResume = () => {
+const handleVisibilityResume = (): void => {
   if (document.visibilityState !== 'visible') return
   resumeWorkWhiteNoiseIfNeeded()
 }
@@ -103,5 +129,4 @@ const handleVisibilityResume = () => {
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', handleVisibilityResume)
   window.addEventListener('pageshow', handleVisibilityResume)
-  window.addEventListener('focus', handleVisibilityResume)
 }

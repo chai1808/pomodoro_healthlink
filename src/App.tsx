@@ -211,7 +211,6 @@ export default function App() {
 
   return (
     <AppContent
-      key={snapshot.pomodoroMode}
       snapshot={snapshot}
       showDetails={showDetails}
       onToggleDetails={() => setShowDetails((prev) => !prev)}

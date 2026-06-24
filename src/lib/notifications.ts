@@ -89,18 +89,17 @@ export const schedulePhaseNotifications = async (
 
   await cancelScheduledTimerNotifications()
 
-  const canSchedule = typeof TimestampTrigger === 'function'
+  if (typeof TimestampTrigger !== 'function') {
+    return
+  }
 
   for (const phase of phases) {
     if (phase.endAt <= Date.now()) continue
 
-    const options: NotificationOptions & { showTrigger?: TimestampTrigger } = {
+    const options: NotificationOptions & { showTrigger: TimestampTrigger } = {
       ...notificationOptions(phase.body),
       tag: `${NOTIFICATION_TAG_PREFIX}${phase.endAt}`,
-    }
-
-    if (canSchedule) {
-      options.showTrigger = new TimestampTrigger(phase.endAt)
+      showTrigger: new TimestampTrigger(phase.endAt),
     }
 
     try {
