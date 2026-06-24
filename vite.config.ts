@@ -59,7 +59,13 @@ export default defineConfig(({ mode }) => {
         srcDir: 'src',
         filename: 'sw.ts',
         registerType: 'autoUpdate',
+        injectRegister: false,
         includeAssets: ['favicon.svg'],
+        devOptions: {
+          enabled: true,
+          type: 'module',
+          navigateFallback: 'index.html',
+        },
         manifest: {
           name: 'Pomodoro Healthlink',
           short_name: 'Healthlink',

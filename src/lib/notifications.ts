@@ -21,8 +21,19 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
 
 const getServiceWorkerRegistration = async (): Promise<ServiceWorkerRegistration | null> => {
   if (!('serviceWorker' in navigator)) return null
+
   try {
-    return await navigator.serviceWorker.ready
+    const existing = await navigator.serviceWorker.getRegistration()
+    if (existing?.active) return existing
+
+    const ready = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => {
+        window.setTimeout(() => resolve(null), 5000)
+      }),
+    ])
+
+    return ready
   } catch {
     return null
   }

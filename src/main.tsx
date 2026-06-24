@@ -4,7 +4,12 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App'
 
-registerSW({ immediate: true })
+registerSW({
+  immediate: true,
+  onRegisterError(error) {
+    console.error('[PWA] Service Worker registration failed:', error)
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
