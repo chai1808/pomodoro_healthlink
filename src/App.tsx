@@ -87,10 +87,12 @@ const AppContent = ({
             <TimerControls
               sessionState={timer.sessionState}
               isLimitReached={timer.isLimitReached}
+              isMuted={timer.isMuted}
               onStart={timer.handleStart}
               onPause={timer.handlePause}
               onResume={timer.handleResume}
               onReset={timer.handleReset}
+              onToggleMute={timer.handleToggleMute}
             />
           </>
         )}

@@ -1,11 +1,12 @@
 import type { PhaseAudioSchedule } from './timerSchedule'
 
-const WHITE_NOISE_GAIN = 0.02
+const WHITE_NOISE_GAIN = 0.01
 const SAMPLE_RATE = 22050
-const LOOP_SECONDS = 30
+const LOOP_SECONDS = 60
 
 let audioElement: HTMLAudioElement | null = null
 let noiseUrl: string | null = null
+let userMuted = false
 let shouldPlayWorkWhiteNoise = false
 let intentionalPause = false
 let isStarting = false
@@ -123,6 +124,7 @@ const ensureNoiseSource = (audio: HTMLAudioElement): void => {
 }
 
 const tryPlay = async (forceRestart = false): Promise<void> => {
+  if (userMuted) return
   if (isStarting) return
   isStarting = true
 
@@ -177,7 +179,7 @@ const schedulePhaseEnd = (
 
     if (next.phase === 'work') {
       shouldPlayWorkWhiteNoise = true
-      void tryPlay(false)
+      if (!userMuted) void tryPlay(false)
     }
 
     schedulePhaseEnd(schedules, nextIndex)
@@ -190,6 +192,22 @@ const schedulePhaseEnd = (
 
   phaseTimer = setTimeout(fire, delay)
 }
+
+export const setAudioMuted = (muted: boolean): void => {
+  userMuted = muted
+  if (muted) {
+    intentionalPause = true
+    if (audioElement) audioElement.pause()
+    setMediaSessionPlaying(false)
+    return
+  }
+
+  if (shouldPlayWorkWhiteNoise) {
+    void tryPlay(false)
+  }
+}
+
+export const getAudioMuted = (): boolean => userMuted
 
 export const schedulePhaseAudioChain = (
   schedules: PhaseAudioSchedule[],
@@ -206,7 +224,7 @@ export const schedulePhaseAudioChain = (
 
   if (first.phase === 'work') {
     shouldPlayWorkWhiteNoise = true
-    void tryPlay(false)
+    if (!userMuted) void tryPlay(false)
   } else {
     shouldPlayWorkWhiteNoise = false
     intentionalPause = true
@@ -221,6 +239,7 @@ export const startWorkWhiteNoise = async (
   forceRestart = false,
 ): Promise<void> => {
   shouldPlayWorkWhiteNoise = true
+  if (userMuted) return
   await tryPlay(forceRestart)
 }
 
@@ -243,7 +262,7 @@ export const resumeWorkWhiteNoiseIfNeeded = (): void => {
   resumeTimer = setTimeout(() => {
     resumeTimer = null
     void tryPlay(false)
-  }, 150)
+  }, 0)
 }
 
 const handleVisibilityResume = (): void => {

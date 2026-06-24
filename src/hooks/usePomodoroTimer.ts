@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { formatElapsed, minutesToSeconds } from '../lib/utils'
-import { startWorkWhiteNoise, stopWorkWhiteNoise, schedulePhaseAudioChain } from '../lib/sound'
+import { startWorkWhiteNoise, stopWorkWhiteNoise, schedulePhaseAudioChain, setAudioMuted } from '../lib/sound'
 import {
   incrementDailySession,
   isSessionLimitReached,
@@ -63,14 +63,17 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   const [isLimitReached, setIsLimitReached] = useState(
     () => isSessionLimitReached(config.maxSessionsPerDay),
   )
+  const [isMuted, setIsMuted] = useState(false)
 
   const endAtRef = useRef<number | null>(initialState.endAt)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const wallClockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const phaseRef = useRef(phase)
   const cycleRef = useRef(cycle)
   const sessionStateRef = useRef(sessionState)
   const configRef = useRef(config)
   const isAdvancingRef = useRef(false)
+  const syncFromWallClockRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     phaseRef.current = phase
@@ -83,6 +86,13 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = null
+    }
+  }, [])
+
+  const clearWallClockTimer = useCallback(() => {
+    if (wallClockTimerRef.current) {
+      clearTimeout(wallClockTimerRef.current)
+      wallClockTimerRef.current = null
     }
   }, [])
 
@@ -123,6 +133,24 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     }, 200)
   }, [clearTimer])
 
+  const scheduleWallClockSync = useCallback(() => {
+    clearWallClockTimer()
+    if (sessionStateRef.current !== 'running' || !endAtRef.current) return
+
+    const tick = () => {
+      wallClockTimerRef.current = null
+      syncFromWallClockRef.current()
+    }
+
+    const delay = endAtRef.current - Date.now()
+    if (delay <= 0) {
+      tick()
+      return
+    }
+
+    wallClockTimerRef.current = setTimeout(tick, delay)
+  }, [clearWallClockTimer])
+
   const applyRunningTimer = useCallback(
     (nextPhase: TimerPhase, nextCycle: number, endAt: number) => {
       const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
@@ -133,8 +161,9 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       setRemainingSeconds(left)
       persistRunningState(nextPhase, nextCycle, endAt)
       startTicking()
+      scheduleWallClockSync()
     },
-    [persistRunningState, startTicking],
+    [persistRunningState, scheduleWallClockSync, startTicking],
   )
 
   const startCountdown = useCallback(
@@ -147,6 +176,8 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   const completeSession = useCallback(() => {
     incrementDailySession()
     const usage = loadDailyUsage()
+    clearWallClockTimer()
+    stopWorkWhiteNoise()
     clearTimerState()
     endAtRef.current = null
     setPhase('work')
@@ -154,7 +185,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     setSessionState('completed')
     setIsLimitReached(usage.completedSessions >= config.maxSessionsPerDay)
     setRemainingSeconds(workSeconds)
-  }, [config.maxSessionsPerDay, workSeconds])
+  }, [config.maxSessionsPerDay, clearWallClockTimer, workSeconds])
 
   const advancePhase = useCallback(() => {
     if (isAdvancingRef.current) return
@@ -209,6 +240,8 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       isAdvancingRef.current = false
     }
   }, [applyRunningTimer, breakSeconds, completeSession, workSeconds])
+
+  syncFromWallClockRef.current = syncFromWallClock
 
   const scheduleWorkAudio = useCallback(() => {
     if (sessionStateRef.current !== 'running' || !endAtRef.current) {
@@ -266,7 +299,10 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     }
   }, [syncFromWallClock, syncWorkAudio])
 
-  useEffect(() => () => clearTimer(), [clearTimer])
+  useEffect(() => () => {
+    clearTimer()
+    clearWallClockTimer()
+  }, [clearTimer, clearWallClockTimer])
 
   useEffect(() => {
     scheduleWorkAudio()
@@ -284,6 +320,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     configSnapshotRef.current = snapshot
 
     clearTimer()
+    clearWallClockTimer()
     endAtRef.current = null
     clearTimerState()
     setPhase('work')
@@ -296,6 +333,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     config.cycles,
     config.maxSessionsPerDay,
     clearTimer,
+    clearWallClockTimer,
     sessionState,
   ])
 
@@ -321,6 +359,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
   const handlePause = useCallback(() => {
     if (sessionState !== 'running') return
     clearTimer()
+    clearWallClockTimer()
     endAtRef.current = null
     saveTimerState({
       sessionState: 'paused',
@@ -332,7 +371,7 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
       updatedAt: Date.now(),
     })
     setSessionState('paused')
-  }, [sessionState, clearTimer, phase, cycle, remainingSeconds, config.mode])
+  }, [sessionState, clearTimer, clearWallClockTimer, phase, cycle, remainingSeconds, config.mode])
 
   const handleResume = useCallback(() => {
     if (sessionState !== 'paused') return
@@ -342,14 +381,28 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
 
   const handleReset = useCallback(() => {
     clearTimer()
+    clearWallClockTimer()
     endAtRef.current = null
     clearTimerState()
+    setIsMuted(false)
+    setAudioMuted(false)
     setPhase('work')
     setCycle(1)
     setRemainingSeconds(workSeconds)
     setSessionState('idle')
     setIsLimitReached(isSessionLimitReached(config.maxSessionsPerDay))
-  }, [clearTimer, config.maxSessionsPerDay, workSeconds])
+  }, [clearTimer, clearWallClockTimer, config.maxSessionsPerDay, workSeconds])
+
+  const handleToggleMute = useCallback(() => {
+    setIsMuted((prev) => {
+      const next = !prev
+      setAudioMuted(next)
+      if (!next) {
+        scheduleWorkAudio()
+      }
+      return next
+    })
+  }, [scheduleWorkAudio])
 
   const totalSeconds = getPhaseSeconds(phase)
   const progress =
@@ -362,10 +415,12 @@ export const usePomodoroTimer = ({ config, enabled }: UsePomodoroTimerOptions) =
     displayTime: formatElapsed(remainingSeconds),
     sessionState,
     isLimitReached,
+    isMuted,
     progress,
     handleStart,
     handlePause,
     handleResume,
     handleReset,
+    handleToggleMute,
   }
 }

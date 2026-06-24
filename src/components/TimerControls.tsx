@@ -3,19 +3,23 @@ import type { SessionState } from '../types'
 type TimerControlsProps = {
   sessionState: SessionState
   isLimitReached: boolean
+  isMuted: boolean
   onStart: () => void
   onPause: () => void
   onResume: () => void
   onReset: () => void
+  onToggleMute: () => void
 }
 
 export const TimerControls = ({
   sessionState,
   isLimitReached,
+  isMuted,
   onStart,
   onPause,
   onResume,
   onReset,
+  onToggleMute,
 }: TimerControlsProps) => {
   if (isLimitReached) {
     return (
@@ -29,7 +33,7 @@ export const TimerControls = ({
   }
 
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex flex-wrap items-center justify-center gap-3">
       {sessionState === 'idle' || sessionState === 'completed' ? (
         <button
           type="button"
@@ -60,14 +64,26 @@ export const TimerControls = ({
       )}
 
       {sessionState !== 'idle' && (
-        <button
-          type="button"
-          onClick={onReset}
-          className="duration-300 cursor-pointer min-h-11 rounded-full border border-mono-border/50 px-4 py-2 text-xs text-mono-muted transition-colors hover:border-mono-border hover:text-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
-          aria-label="タイマーをリセット"
-        >
-          リセット
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={onReset}
+            className="duration-300 cursor-pointer min-h-11 rounded-full border border-mono-border/50 px-4 py-2 text-xs text-mono-muted transition-colors hover:border-mono-border hover:text-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
+            aria-label="タイマーをリセット"
+          >
+            リセット
+          </button>
+          <button
+            type="button"
+            onClick={onToggleMute}
+            aria-pressed={isMuted}
+            aria-label={isMuted ? 'ミュートを解除' : 'ホワイトノイズをミュート'}
+            className="duration-300 cursor-pointer min-h-11 rounded-full border border-mono-border/50 px-4 py-2 text-xs text-mono-muted transition-colors hover:border-mono-border hover:text-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text data-[muted=true]:border-[#c4a574] data-[muted=true]:text-[#c4a574]"
+            data-muted={isMuted ? 'true' : 'false'}
+          >
+            {isMuted ? 'ミュート解除' : 'ミュート'}
+          </button>
+        </>
       )}
     </div>
   )
