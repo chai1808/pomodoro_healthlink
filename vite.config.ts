@@ -14,6 +14,28 @@ const readRequestBody = (req: IncomingMessage): Promise<string> =>
     req.on('error', reject)
   })
 
+const googleConfigApiPlugin = (env: Record<string, string>): Plugin => ({
+  name: 'google-config-api',
+  configureServer(server) {
+    server.middlewares.use('/api/config', (req, res, next) => {
+      if (req.method !== 'GET') {
+        next()
+        return
+      }
+
+      const clientId =
+        env.VITE_GOOGLE_CLIENT_ID ?? env.GOOGLE_CLIENT_ID ?? ''
+      const redirectUri =
+        env.VITE_GOOGLE_REDIRECT_URI ?? env.GOOGLE_REDIRECT_URI ?? ''
+
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.setHeader('Cache-Control', 'no-store')
+      ;(res as ServerResponse).end(JSON.stringify({ clientId, redirectUri }))
+    })
+  },
+})
+
 const googleTokenApiPlugin = (clientSecret: string): Plugin => ({
   name: 'google-token-api',
   configureServer(server) {
@@ -51,6 +73,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      googleConfigApiPlugin(env),
       googleTokenApiPlugin(env.GOOGLE_CLIENT_SECRET),
       react(),
       tailwindcss(),

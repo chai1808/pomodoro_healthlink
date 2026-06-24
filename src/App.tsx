@@ -57,6 +57,25 @@ const AppContent = ({
 
   return (
     <div className="relative flex h-full min-h-dvh flex-col">
+      <aside
+        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-[max(1.25rem,env(safe-area-inset-left))] z-10 max-w-[21rem]"
+        aria-label="アプリの説明"
+      >
+        <p className="text-[10px] leading-relaxed text-mono-muted">
+          Pomodoro Healthlink は Fitbit の健康データと連携して、
+          集中時間と健康状態を可視化するポモドーロタイマーです。
+        </p>
+        <p className="mt-3 text-[10px] leading-relaxed text-mono-muted">
+          このアプリでは以下の目的で Google アカウント認証を利用します。
+        </p>
+        <ul className="mt-1.5 list-inside space-y-0.5 text-[10px] leading-relaxed text-mono-muted">
+          <li>・Fitbit活動データの取得</li>
+          <li>・睡眠データの取得</li>
+          <li>・活動量データの表示</li>
+          <li>・ポモドーロタイマーとの連携分析</li>
+        </ul>
+      </aside>
+
       <header className="flex shrink-0 items-center justify-between px-4 py-3 sm:px-6">
         <h1 className="text-xs tracking-[0.3em] text-mono-muted uppercase">
           Pomodoro Healthlink
