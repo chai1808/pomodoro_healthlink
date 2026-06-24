@@ -6,6 +6,7 @@ import { WeatherBadge } from './components/WeatherBadge'
 import { SleepSummary } from './components/SleepSummary'
 import { ActivitySummary } from './components/ActivitySummary'
 import { HealthConnectButton } from './components/HealthConnectButton'
+import { PrivacyPolicySheet } from './components/PrivacyPolicySheet'
 import { useHealthData } from './hooks/useHealthData'
 import { usePomodoroTimer } from './hooks/usePomodoroTimer'
 import { getPomodoroConfig } from './lib/healthJudgment'
@@ -15,18 +16,27 @@ import type { HealthSnapshot } from './types'
 type AppContentProps = {
   snapshot: HealthSnapshot
   showDetails: boolean
+  showPrivacy: boolean
   onToggleDetails: () => void
   onCloseDetails: () => void
+  onTogglePrivacy: () => void
+  onClosePrivacy: () => void
   healthConfigured: boolean
   healthConnected: boolean
   onDisconnect: () => void
 }
 
+const bottomActionButtonClass =
+  'duration-200 cursor-pointer rounded-full border border-mono-border bg-mono-surface px-4 py-2.5 text-xs text-mono-text shadow-lg hover:border-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text'
+
 const AppContent = ({
   snapshot,
   showDetails,
+  showPrivacy,
   onToggleDetails,
   onCloseDetails,
+  onTogglePrivacy,
+  onClosePrivacy,
   healthConfigured,
   healthConnected,
   onDisconnect,
@@ -98,17 +108,38 @@ const AppContent = ({
         )}
       </main>
 
-      {healthConnected ? (
-        <>
+      <div className="fixed right-5 bottom-6 z-30 flex gap-2">
+        <button
+          type="button"
+          onClick={onTogglePrivacy}
+          className={bottomActionButtonClass}
+          aria-expanded={showPrivacy}
+          aria-label={
+            showPrivacy ? 'プライバシーポリシーを閉じる' : 'プライバシーポリシーを表示'
+          }
+        >
+          {showPrivacy ? '閉じる' : 'プライバシー'}
+        </button>
+
+        {healthConnected ? (
           <button
             type="button"
             onClick={onToggleDetails}
-            className="fixed right-5 bottom-6 z-30 duration-200 cursor-pointer rounded-full border border-mono-border bg-mono-surface px-4 py-2.5 text-xs text-mono-text shadow-lg hover:border-mono-text focus:outline-none focus-visible:ring-2 focus-visible:ring-mono-text"
+            className={bottomActionButtonClass}
             aria-expanded={showDetails}
             aria-label={showDetails ? '詳細を閉じる' : '詳細データを表示'}
           >
             {showDetails ? '閉じる' : '詳細'}
           </button>
+        ) : (
+          <HealthConnectButton configured={healthConfigured} />
+        )}
+      </div>
+
+      <PrivacyPolicySheet open={showPrivacy} onClose={onClosePrivacy} />
+
+      {healthConnected ? (
+        <>
 
           {showDetails && (
             <>
@@ -159,15 +190,14 @@ const AppContent = ({
             </>
           )}
         </>
-      ) : (
-        <HealthConnectButton configured={healthConfigured} />
-      )}
+      ) : null}
     </div>
   )
 }
 
 export default function App() {
   const [showDetails, setShowDetails] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const {
     snapshot,
     loading,
@@ -206,12 +236,25 @@ export default function App() {
     disconnect()
   }
 
+  const handleToggleDetails = () => {
+    setShowPrivacy(false)
+    setShowDetails((prev) => !prev)
+  }
+
+  const handleTogglePrivacy = () => {
+    setShowDetails(false)
+    setShowPrivacy((prev) => !prev)
+  }
+
   return (
     <AppContent
       snapshot={snapshot}
       showDetails={showDetails}
-      onToggleDetails={() => setShowDetails((prev) => !prev)}
+      showPrivacy={showPrivacy}
+      onToggleDetails={handleToggleDetails}
       onCloseDetails={() => setShowDetails(false)}
+      onTogglePrivacy={handleTogglePrivacy}
+      onClosePrivacy={() => setShowPrivacy(false)}
       healthConfigured={healthConfigured}
       healthConnected={healthConnected}
       onDisconnect={handleDisconnect}

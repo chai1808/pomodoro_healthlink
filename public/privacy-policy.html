@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>プライバシーポリシー | Pomodoro Healthlink</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #020617;
+        --text: #e2e8f0;
+        --muted: #64748b;
+      }
+      body {
+        margin: 0;
+        padding: 1.5rem;
+        max-width: 42rem;
+        margin-inline: auto;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Kiwi Maru", serif, system-ui, sans-serif;
+        line-height: 1.7;
+        font-size: 0.95rem;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 400;
+      }
+      h2 {
+        font-size: 1rem;
+        font-weight: 400;
+        margin-top: 1.5rem;
+      }
+      p,
+      ul {
+        color: var(--muted);
+      }
+      ul {
+        padding-left: 1.25rem;
+      }
+      li + li {
+        margin-top: 0.5rem;
+      }
+      .updated {
+        font-size: 0.8rem;
+      }
+      a {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>プライバシーポリシー</h1>
+    <p class="updated">最終更新日: 2026年6月24日</p>
+
+    <h2>1. はじめに</h2>
+    <p>
+      Pomodoro Healthlink（以下「本アプリ」）は、睡眠・活動量・気象情報に基づいて
+      ポモドーロタイマーを調整する Web アプリです。本ポリシーは、本アプリが取得・利用する
+      情報とその取り扱いについて説明します。
+    </p>
+
+    <h2>2. 取得する情報</h2>
+    <ul>
+      <li>
+        <strong>Fitbit データ（Google Health API 経由）</strong>：睡眠時間・就寝・起床時刻、歩数。
+        Fitbit 連携を行った場合にのみ取得します。
+      </li>
+      <li>
+        <strong>位置情報</strong>：ブラウザの Geolocation API により、天気・気圧データ取得のために
+        おおよその位置（緯度・経度）を取得します。
+      </li>
+      <li>
+        <strong>端末内の保存データ</strong>：OAuth トークン、タイマーの進行状態、1 日の利用回数、
+        位置情報のキャッシュなどをブラウザの localStorage に保存します。
+      </li>
+    </ul>
+
+    <h2>3. 利用目的</h2>
+    <ul>
+      <li>睡眠・歩数に基づく体調判定とタイマーの有効・無効の制御</li>
+      <li>気圧変動に応じたポモドーロモード（作業時間・休憩時間）の調整</li>
+      <li>天気・注意報などの表示</li>
+      <li>タイマー状態の復元（再読み込み・画面復帰時）</li>
+    </ul>
+
+    <h2>4. 外部サービス</h2>
+    <p>
+      本アプリは以下の外部サービスと連携します。各サービスのプライバシーポリシーもあわせて
+      ご確認ください。
+    </p>
+    <ul>
+      <li>Google（OAuth 認証・Google Health API）</li>
+      <li>Open-Meteo（天気・気圧データ）</li>
+      <li>気象庁 bosai API（注意報・予報）</li>
+    </ul>
+
+    <h2>5. データの保存と共有</h2>
+    <p>
+      健康データは Google Health API から取得し、判定・表示のために端末内で処理します。
+      本アプリの開発者が、取得した健康データを独自のサーバーに蓄積したり、
+      第三者へ販売・提供したりすることはありません。OAuth トークンの更新処理のみ、
+      ホスティング環境（Vercel）上の API を経由します。
+    </p>
+
+    <h2>6. 連携の解除</h2>
+    <p>
+      詳細パネルの「Fitbit 連携を解除」から、本アプリ内の連携情報（トークン等）を削除できます。
+      Fitbit 側のアプリ連携解除は、Fitbit アカウント設定から行ってください。
+    </p>
+
+    <h2>7. お問い合わせ</h2>
+    <p>
+      本ポリシーに関するお問い合わせは、本アプリの公開リポジトリ（GitHub）の Issue
+      よりご連絡ください。
+    </p>
+
+    <p><a href="/">アプリに戻る</a></p>
+  </body>
+</html>
