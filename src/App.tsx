@@ -82,7 +82,7 @@ const AppContent = ({
         </h1>
       </header>
 
-      <main className="relative flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-24 sm:gap-8">
+      <main className="relative flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-34 sm:gap-8">
         <StatusOverlay status={snapshot.status} visible={!isHealthy} />
 
         <div
